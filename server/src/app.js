@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-
 import { env } from "./config/env.js";
 import healthRoutes from "./features/health/health.routes.js";
 import { notFound } from "./middlewares/notFound.js";
