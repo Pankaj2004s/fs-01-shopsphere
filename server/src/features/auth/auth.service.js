@@ -2,7 +2,7 @@ import User from "../users/user.model.js";
 import ApiError from "../../utils/ApiError.js";
 import { signToken } from "../../utils/token.js";
 
-const toUserResponse = (user) => ({
+export const toUserResponse = (user) => ({
   id: user._id,
   name: user.name,
   email: user.email,
