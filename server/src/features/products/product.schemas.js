@@ -31,3 +31,32 @@ export const createProductSchema = z.object({
     .optional(),
   category: objectIdSchema,
 });
+
+export const updateProductSchema = createProductSchema
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "At least one field is required to update",
+  });
+
+export const listProductsQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(10),
+    search: z.string().trim().min(1).optional(),
+    category: objectIdSchema.optional(),
+    minPrice: z.coerce.number().min(0).optional(),
+    maxPrice: z.coerce.number().min(0).optional(),
+    sort: z
+      .enum(["newest", "oldest", "price_asc", "price_desc"])
+      .default("newest"),
+  })
+  .refine(
+    (data) =>
+      data.minPrice === undefined ||
+      data.maxPrice === undefined ||
+      data.minPrice <= data.maxPrice,
+    {
+      message: "minPrice cannot be greater than maxPrice",
+      path: ["maxPrice"],
+    },
+  );
