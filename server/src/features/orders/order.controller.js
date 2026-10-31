@@ -29,3 +29,12 @@ export const listVendor = asyncHandler(async (req, res) => {
   );
   res.status(200).json(result);
 });
+
+export const updateStatus = asyncHandler(async (req, res) => {
+  const order = await orderService.updateOrderStatus(
+    req.user._id,
+    req.validated.params.id,
+    req.body.status,
+  );
+  res.status(200).json({ order });
+});
