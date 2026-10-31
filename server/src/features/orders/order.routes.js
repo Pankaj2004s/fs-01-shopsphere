@@ -1,8 +1,18 @@
 import { Router } from "express";
 import { protect, authorize } from "../../middlewares/auth.js";
 import validate from "../../middlewares/validate.js";
-import { listOrdersQuerySchema, orderIdParamSchema } from "./order.schemas.js";
-import { place, list, getOne, listVendor } from "./order.controller.js";
+import {
+  listOrdersQuerySchema,
+  orderIdParamSchema,
+  updateOrderStatusSchema,
+} from "./order.schemas.js";
+import {
+  place,
+  list,
+  getOne,
+  listVendor,
+  updateStatus,
+} from "./order.controller.js";
 
 const router = Router();
 
@@ -17,5 +27,11 @@ router.get(
   listVendor,
 );
 router.get("/:id", validate(orderIdParamSchema, "params"), getOne);
+router.patch(
+  "/:id/status",
+  validate(orderIdParamSchema, "params"),
+  validate(updateOrderStatusSchema),
+  updateStatus,
+);
 
 export default router;
