@@ -5,3 +5,19 @@ export const place = asyncHandler(async (req, res) => {
   const order = await orderService.placeOrder(req.user._id);
   res.status(201).json({ order });
 });
+
+export const list = asyncHandler(async (req, res) => {
+  const result = await orderService.listMyOrders(
+    req.user._id,
+    req.validated.query,
+  );
+  res.status(200).json(result);
+});
+
+export const getOne = asyncHandler(async (req, res) => {
+  const order = await orderService.getMyOrder(
+    req.user._id,
+    req.validated.params.id,
+  );
+  res.status(200).json({ order });
+});
