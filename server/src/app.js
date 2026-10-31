@@ -8,6 +8,7 @@ import authRoutes from "./features/auth/auth.routes.js";
 import categoryRoutes from "./features/categories/category.routes.js";
 import productRoutes from "./features/products/product.routes.js";
 import cartRoutes from "./features/cart/cart.routes.js";
+import orderRoutes from "./features/orders/order.routes.js";
 import { notFound } from "./middlewares/notFound.js";
 import errorHandler from "./middlewares/errorHandler.js";
 
@@ -23,6 +24,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
+app.use("/api/orders", orderRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
