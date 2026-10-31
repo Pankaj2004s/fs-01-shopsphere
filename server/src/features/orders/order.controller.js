@@ -21,3 +21,11 @@ export const getOne = asyncHandler(async (req, res) => {
   );
   res.status(200).json({ order });
 });
+
+export const listVendor = asyncHandler(async (req, res) => {
+  const result = await orderService.listVendorOrders(
+    req.user._id,
+    req.validated.query,
+  );
+  res.status(200).json(result);
+});
