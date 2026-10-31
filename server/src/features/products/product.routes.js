@@ -3,10 +3,11 @@ import { protect, authorize } from "../../middlewares/auth.js";
 import validate from "../../middlewares/validate.js";
 import {
   createProductSchema,
+  updateProductSchema,
   listProductsQuerySchema,
   productIdParamSchema,
 } from "./product.schemas.js";
-import { create, getOne, list } from "./product.controller.js";
+import { create, getOne, list, update, remove } from "./product.controller.js";
 
 const router = Router();
 
@@ -18,6 +19,21 @@ router.post(
   authorize("vendor", "admin"),
   validate(createProductSchema),
   create,
+);
+router.patch(
+  "/:id",
+  protect,
+  authorize("vendor", "admin"),
+  validate(productIdParamSchema, "params"),
+  validate(updateProductSchema),
+  update,
+);
+router.delete(
+  "/:id",
+  protect,
+  authorize("vendor", "admin"),
+  validate(productIdParamSchema, "params"),
+  remove,
 );
 
 export default router;
