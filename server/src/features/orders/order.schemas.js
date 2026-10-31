@@ -11,3 +11,7 @@ export const listOrdersQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(10),
   status: z.enum(ORDER_STATUSES).optional(),
 });
+
+export const updateOrderStatusSchema = z.object({
+  status: z.enum(ORDER_STATUSES),
+});
