@@ -24,7 +24,10 @@ export const placeOrder = async (userId) => {
   const items = [];
   for (const item of cart.items) {
     if (!item.product) {
-      throw new ApiError(400, "Some items in your cart are no longer available");
+      throw new ApiError(
+        400,
+        "Some items in your cart are no longer available",
+      );
     }
     if (item.product.vendor.equals(userId)) {
       throw new ApiError(400, "You cannot buy your own product");
@@ -67,5 +70,32 @@ export const placeOrder = async (userId) => {
 
   await Cart.updateOne({ user: userId }, { $set: { items: [] } });
 
+  return order;
+};
+
+export const listMyOrders = async (userId, { page, limit, status }) => {
+  const filter = { user: userId };
+  if (status) {
+    filter.status = status;
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [orders, total] = await Promise.all([
+    Order.find(filter).sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit),
+    Order.countDocuments(filter),
+  ]);
+
+  return {
+    orders,
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
+};
+
+export const getMyOrder = async (userId, orderId) => {
+  const order = await Order.findOne({ _id: orderId, user: userId });
+  if (!order) {
+    throw new ApiError(404, "Order not found");
+  }
   return order;
 };
