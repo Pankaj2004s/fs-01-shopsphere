@@ -6,7 +6,8 @@ import { env } from "./config/env.js";
 import healthRoutes from "./features/health/health.routes.js";
 import authRoutes from "./features/auth/auth.routes.js";
 import userRoutes from "./features/users/user.routes.js";
-import notFound from "./middlewares/notFound.js";
+import categoryRoutes from "./features/categories/category.routes.js";
+import { notFound } from "./middlewares/notFound.js";
 import errorHandler from "./middlewares/errorHandler.js";
 
 const app = express();
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/categories", categoryRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
