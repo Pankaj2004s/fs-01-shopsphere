@@ -82,3 +82,30 @@ export const listProducts = async ({
     },
   };
 };
+
+export const updateProduct = async (user, id, data) => {
+  const product = await Product.findById(id);
+
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  const isOwner = product.vendor.equals(user._id);
+
+  if (!isOwner && user.role !== "admin") {
+    throw new ApiError(403, "You can only modify your own products");
+  }
+
+  if (data.category) {
+    const categoryExists = await Category.exists({ _id: data.category });
+
+    if (!categoryExists) {
+      throw new ApiError(404, "Category not found");
+    }
+  }
+
+  product.set(data);
+  await product.save();
+
+  return product.populate(productPopulate);
+};
