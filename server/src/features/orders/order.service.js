@@ -2,6 +2,7 @@ import Cart from "../cart/cart.model.js";
 import Product from "../products/product.model.js";
 import Order from "./order.model.js";
 import ApiError from "../../utils/ApiError.js";
+import { canActorSet, canTransition } from "./order.transitions.js";
 
 const releaseStock = async (reserved) => {
   await Promise.all(
@@ -138,4 +139,51 @@ export const listVendorOrders = async (vendorId, { page, limit, status }) => {
     orders: orders.map((order) => toVendorView(order, vendorId)),
     pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
   };
+};
+
+export const updateOrderStatus = async (userId, orderId, newStatus) => {
+  const order = await Order.findById(orderId);
+  if (!order) {
+    throw new ApiError(404, "Order not found");
+  }
+
+  const isCustomer = order.user.equals(userId);
+  const isVendor = order.items.some((item) => item.vendor.equals(userId));
+  if (!isCustomer && !isVendor) {
+    throw new ApiError(404, "Order not found");
+  }
+
+  const actor = isCustomer ? "customer" : "vendor";
+
+  if (!canActorSet(actor, newStatus)) {
+    throw new ApiError(403, `You cannot set status to ${newStatus}`);
+  }
+
+  if (!canTransition(order.status, newStatus)) {
+    throw new ApiError(
+      409,
+      `Cannot change status from ${order.status} to ${newStatus}`,
+    );
+  }
+
+  const updated = await Order.findOneAndUpdate(
+    { _id: orderId, status: order.status },
+    { $set: { status: newStatus } },
+    { returnDocument: "after" },
+  );
+
+  if (!updated) {
+    throw new ApiError(409, "Order was changed by someone else, please retry");
+  }
+
+  if (newStatus === "cancelled") {
+    await releaseStock(updated.items);
+  }
+
+  if (actor === "vendor") {
+    await updated.populate("user", "name");
+    return toVendorView(updated, userId);
+  }
+
+  return updated;
 };
