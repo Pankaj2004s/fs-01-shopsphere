@@ -32,7 +32,8 @@ export const addItem = async (userId, { productId, quantity }) => {
     throw new ApiError(404, "Product not found");
   }
 
-  const cart = (await Cart.findOne({ user: userId })) ?? new Cart({ user: userId });
+  const cart =
+    (await Cart.findOne({ user: userId })) ?? new Cart({ user: userId });
 
   const existing = cart.items.find((item) => item.product.equals(productId));
   const newQuantity = (existing?.quantity ?? 0) + quantity;
@@ -48,5 +49,37 @@ export const addItem = async (userId, { productId, quantity }) => {
   }
 
   await cart.save();
+  return getCart(userId);
+};
+
+export const updateItem = async (userId, productId, quantity) => {
+  const product = await Product.findById(productId);
+  if (!product) {
+    throw new ApiError(404, "Product not found");
+  }
+
+  if (quantity > product.stock) {
+    throw new ApiError(400, `Only ${product.stock} item(s) in stock`);
+  }
+
+  const cart = await Cart.findOneAndUpdate(
+    { user: userId, "items.product": productId },
+    { $set: { "items.$.quantity": quantity } },
+    { runValidators: true },
+  );
+
+  if (!cart) {
+    throw new ApiError(404, "Item not found in cart");
+  }
+
+  return getCart(userId);
+};
+
+export const removeItem = async (userId, productId) => {
+  await Cart.updateOne(
+    { user: userId },
+    { $pull: { items: { product: productId } } },
+  );
+
   return getCart(userId);
 };
