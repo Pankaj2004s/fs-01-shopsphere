@@ -99,3 +99,43 @@ export const getMyOrder = async (userId, orderId) => {
   }
   return order;
 };
+
+const toVendorView = (order, vendorId) => {
+  const items = order.items.filter((item) => item.vendor.equals(vendorId));
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
+
+  return {
+    _id: order._id,
+    customer: order.user,
+    status: order.status,
+    createdAt: order.createdAt,
+    items,
+    subtotal,
+  };
+};
+
+export const listVendorOrders = async (vendorId, { page, limit, status }) => {
+  const filter = { "items.vendor": vendorId };
+  if (status) {
+    filter.status = status;
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [orders, total] = await Promise.all([
+    Order.find(filter)
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate("user", "name"),
+    Order.countDocuments(filter),
+  ]);
+
+  return {
+    orders: orders.map((order) => toVendorView(order, vendorId)),
+    pagination: { page, limit, total, totalPages: Math.ceil(total / limit) },
+  };
+};
