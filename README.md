@@ -38,7 +38,7 @@ fs-01-shopsphere/
         │   ├── categories/ # model, schemas, service, controller, routes
         │   ├── health/     # health check route
         │   ├── products/   # model, schemas, service, controller, routes
-        │   └── users/      # user model and routes
+        │   └── users/      # user model
         ├── middlewares/    # auth (protect, authorize), validate, notFound, errorHandler
         ├── scripts/        # seed script
         ├── utils/          # ApiError, asyncHandler, token (jwt helpers)
@@ -113,7 +113,6 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | POST   | `/api/products`          | Vendor or admin | Create a product (vendor is taken from the token) |
 | PATCH  | `/api/products/:id`      | Owner or admin  | Update fields of a product                        |
 | DELETE | `/api/products/:id`      | Owner or admin  | Delete a product                                  |
-| GET    | `/api/users/admin-check` | Admin only      | Temporary route to verify role-based access       |
 
 Protected routes expect the header `Authorization: Bearer <token>`.
 
