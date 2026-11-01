@@ -22,7 +22,9 @@ const errorHandler = (err, req, res, next) => {
     isOperational = true;
   }
 
-  console.error(err);
+  if (env.nodeEnv !== "test") {
+    console.error(err);
+  }
 
   const clientMessage =
     isOperational || env.nodeEnv !== "production"
