@@ -1,13 +1,20 @@
 import { useEffect, useState } from "react";
+import { api } from "./api/client";
 
 function App() {
   const [status, setStatus] = useState("checking...");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/health")
-      .then((res) => res.json())
-      .then((data) => setStatus(data.status))
-      .catch(() => setStatus("server not reachable"));
+    async function checkHealth() {
+      try {
+        const data = await api.get("/health");
+        setStatus(data.status);
+      } catch (err) {
+        setStatus(err.message);
+      }
+    }
+
+    checkHealth();
   }, []);
 
   return (
