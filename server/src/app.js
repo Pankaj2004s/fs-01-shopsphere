@@ -16,7 +16,9 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({ origin: env.clientUrl }));
-app.use(morgan("dev"));
+if (env.nodeEnv !== "test") {
+  app.use(morgan("dev"));
+}
 app.use(express.json());
 
 app.use("/api/health", healthRoutes);
