@@ -2,7 +2,7 @@
 
 A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, Node.js).
 
-> Status: in development. Steps 1 to 4 (setup, authentication and roles, products and categories, cart and orders) are complete.
+> Status: in development. Steps 1 to 5 (setup, authentication and roles, products and categories, cart and orders, automated tests) are complete.
 
 ## Tech Stack
 
@@ -11,6 +11,7 @@ A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, N
 - **Database:** MongoDB with Mongoose
 - **Auth and validation:** JWT, bcryptjs, zod
 - **Security and logging:** helmet, cors, morgan
+- **Testing:** Vitest, Supertest, @vitest/coverage-v8
 
 ## Features So Far
 
@@ -29,6 +30,7 @@ A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, N
 - Order status flow with allowed transitions; cancelling an order puts the items back in stock exactly once
 - Seed script for sample categories, vendors and products (idempotent)
 - Centralized error handling with a custom `ApiError` class, Mongo duplicate, validation and cast errors mapped to 409 or 400, and safe messages in production
+- Automated test suite: 206 tests, including concurrency tests for stock reservation and double cancel
 
 ## Folder Structure
 
@@ -37,6 +39,8 @@ fs-01-shopsphere/
 ├── client/                 # React app (Vite)
 │   └── src/
 └── server/                 # Express API
+    ├── tests/              # Vitest and Supertest tests
+    │   └── helpers/        # database helpers and data factories
     └── src/
         ├── config/         # env and database setup
         ├── features/       # one folder per feature
@@ -88,6 +92,39 @@ cd client && npm run dev
 
 - API: http://localhost:5000/api/health
 - App: http://localhost:5173
+
+## Testing
+
+The tests are integration tests: Supertest calls the Express app directly (no open port) and the requests go through the routes, middleware, controllers and services to a real MongoDB.
+
+```bash
+cd server
+npm test                # run all tests once
+npm run test:watch      # re-run tests when files change
+npm run test:coverage   # run all tests and print a coverage report
+```
+
+- Tests use a separate database, `shopsphere_test`, on the local MongoDB. The connection string is set in `server/vitest.config.js`, so your development data in `shopsphere` is never touched. The test helper refuses to run if the database name does not end with `_test`.
+- Collections are cleared after every test, and test files run one after another because they share one database.
+- The full run takes about 1.5 to 2 minutes, mostly because bcrypt (12 rounds) is slow on purpose.
+
+What is covered:
+
+- Auth: register, login, `/me`, forged and expired tokens, mass assignment of `role`
+- Categories and products: roles (401 vs 403), ownership, admin override, validation, filters and pagination
+- Cart: add, set, remove, stock checks, per-user isolation
+- Orders: stock reservation, price snapshot, rollback, two buyers racing for the last item, order history and ownership (404 instead of 403), vendor privacy, status flow, double cancel restoring stock only once
+
+Latest result: 14 test files, 206 tests, all passing.
+
+| Metric     | Coverage |
+| ---------- | -------- |
+| Statements | 98.77%   |
+| Branches   | 94.36%   |
+| Functions  | 98.68%   |
+| Lines      | 98.99%   |
+
+`src/server.js` and `src/scripts/` are excluded. `src/config/db.js` shows 0% because the tests connect with their own helper.
 
 ## Environment Variables
 
@@ -179,11 +216,11 @@ Send `PATCH /api/orders/:id/status` with a body like `{ "status": "shipped" }`.
 ## Design Notes and Limitations
 
 - Prices are stored as a Number in rupees. A production system would use integer paise.
-- Order status is on the whole order, not per item. If an order has items from more than one vendor, any of those vendors can change the status, and a cancel restores stock for all items.
+- Order status is on the whole order, not per item. If an order has items from more than one vendor, any of those vendors can change the status, and a cancel restores stock for all items. This behaviour is covered by a test.
 - MongoDB transactions need a replica set, so stock reservation uses atomic conditional updates plus a manual rollback. A server crash between the steps could leave stock reduced.
 - Two order requests from the same cart at the exact same time could create two orders. An idempotency key would prevent this.
 - Products are hard deleted. Orders keep a snapshot of name and price, so order history stays correct.
-- No automated tests yet.
+- Tests need a local MongoDB and take about 2 minutes. There are no frontend tests yet.
 
 ## Commit Convention
 
@@ -195,3 +232,4 @@ This project follows Conventional Commits: `feat`, `fix`, `chore`, `docs`, `styl
 - [x] Step 2: Authentication and user roles
 - [x] Step 3: Products, categories and vendor features
 - [x] Step 4: Cart and orders
+- [x] Step 5: Automated tests and coverage
