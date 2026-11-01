@@ -81,4 +81,60 @@ describe("auth API", () => {
       expect(await User.countDocuments()).toBe(0);
     });
   });
+
+  describe("POST /api/auth/login", () => {
+    it("logs in with correct credentials and returns a token", async () => {
+      const { user, password } = await createUser({ email: "login@test.dev" });
+
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send({ email: "login@test.dev", password });
+
+      expect(res.status).toBe(200);
+      expect(res.body.user.email).toBe("login@test.dev");
+      expect(res.body.user.password).toBeUndefined();
+      expect(verifyToken(res.body.token).id).toBe(user._id.toString());
+    });
+
+    it("accepts the email in any case", async () => {
+      const { password } = await createUser({ email: "login@test.dev" });
+
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send({ email: "  LOGIN@Test.dev ", password });
+
+      expect(res.status).toBe(200);
+    });
+
+    it("returns 401 for a wrong password", async () => {
+      await createUser({ email: "login@test.dev" });
+
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send({ email: "login@test.dev", password: "wrong-password" });
+
+      expect(res.status).toBe(401);
+      expect(res.body.message).toBe("Invalid email or password");
+      expect(res.body.token).toBeUndefined();
+    });
+
+    it("gives the same 401 message for an unknown email", async () => {
+      const res = await request(app)
+        .post("/api/auth/login")
+        .send({ email: "nobody@test.dev", password: "password123" });
+
+      expect(res.status).toBe(401);
+      expect(res.body.message).toBe("Invalid email or password");
+    });
+
+    it.each([
+      ["an invalid email", { email: "not-an-email", password: "password123" }],
+      ["an empty password", { email: "login@test.dev", password: "" }],
+      ["an empty body", {}],
+    ])("returns 400 for %s", async (label, body) => {
+      const res = await request(app).post("/api/auth/login").send(body);
+
+      expect(res.status).toBe(400);
+    });
+  });
 });
