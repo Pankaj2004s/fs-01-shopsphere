@@ -8,5 +8,11 @@ export default defineConfig({
       JWT_SECRET: "test_secret_only_for_automated_tests",
     },
     fileParallelism: false,
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.js"],
+      exclude: ["src/server.js", "src/scripts/**"],
+      reporter: ["text", "html"],
+    },
   },
 });
