@@ -5,7 +5,8 @@ function Layout() {
     <div>
       <header>
         <nav>
-          <Link to="/">ShopSphere</Link>
+          <Link to="/">ShopSphere</Link>{" "}
+          <Link to="/login">Login</Link>
         </nav>
       </header>
 
