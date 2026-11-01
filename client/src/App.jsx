@@ -1,27 +1,16 @@
-import { useEffect, useState } from "react";
-import { api } from "./api/client";
+import { Route, Routes } from "react-router-dom";
+import Layout from "./components/Layout";
+import Home from "./pages/Home";
+import NotFound from "./pages/NotFound";
 
 function App() {
-  const [status, setStatus] = useState("checking...");
-
-  useEffect(() => {
-    async function checkHealth() {
-      try {
-        const data = await api.get("/health");
-        setStatus(data.status);
-      } catch (err) {
-        setStatus(err.message);
-      }
-    }
-
-    checkHealth();
-  }, []);
-
   return (
-    <div>
-      <h1>ShopSphere</h1>
-      <p>API status: {status}</p>
-    </div>
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<Home />} />
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
   );
 }
 
