@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getOrders } from "../api/orders";
+import { cancelOrder, getOrders } from "../api/orders";
 import { useAuth } from "../hooks/useAuth";
 
 const priceFormatter = new Intl.NumberFormat("en-IN", {
@@ -14,6 +14,8 @@ const dateFormatter = new Intl.DateTimeFormat("en-IN", {
   timeStyle: "short",
 });
 
+const CANCELLABLE = ["pending", "confirmed"];
+
 function Orders() {
   const { token } = useAuth();
   const [orders, setOrders] = useState([]);
@@ -21,6 +23,8 @@ function Orders() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [cancellingId, setCancellingId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,6 +50,21 @@ function Orders() {
     };
   }, [page, token]);
 
+  async function handleCancel(orderId) {
+    setActionError("");
+    setCancellingId(orderId);
+    try {
+      const data = await cancelOrder(orderId, token);
+      setOrders((current) =>
+        current.map((order) => (order._id === orderId ? data.order : order)),
+      );
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setCancellingId(null);
+    }
+  }
+
   if (loading) {
     return <p>Loading orders...</p>;
   }
@@ -67,6 +86,7 @@ function Orders() {
   return (
     <div>
       <h1>Your orders</h1>
+      {actionError && <p role="alert">{actionError}</p>}
       <ul>
         {orders.map((order) => (
           <li key={order._id}>
@@ -81,6 +101,15 @@ function Orders() {
               ))}
             </ul>
             <p>Total: {priceFormatter.format(order.totalAmount)}</p>
+            {CANCELLABLE.includes(order.status) && (
+              <button
+                type="button"
+                onClick={() => handleCancel(order._id)}
+                disabled={cancellingId === order._id}
+              >
+                {cancellingId === order._id ? "Cancelling..." : "Cancel order"}
+              </button>
+            )}
           </li>
         ))}
       </ul>
