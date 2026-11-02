@@ -18,6 +18,7 @@ function Layout() {
           <Link to="/products">Products</Link>{" "}
           {!loading && user && (
             <>
+              <Link to="/cart">Cart</Link>{" "}
               <span>Hi, {user.name}</span>{" "}
               <button type="button" onClick={handleLogout}>
                 Logout
