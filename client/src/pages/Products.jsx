@@ -9,6 +9,8 @@ const priceFormatter = new Intl.NumberFormat("en-IN", {
 
 function Products() {
   const [products, setProducts] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -17,8 +19,11 @@ function Products() {
 
     async function loadProducts() {
       try {
-        const data = await getProducts();
-        if (!cancelled) setProducts(data.products);
+        const data = await getProducts({ page });
+        if (!cancelled) {
+          setProducts(data.products);
+          setPagination(data.pagination);
+        }
       } catch (err) {
         if (!cancelled) setError(err.message);
       } finally {
@@ -31,7 +36,7 @@ function Products() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [page]);
 
   if (loading) {
     return <p>Loading products...</p>;
@@ -65,6 +70,26 @@ function Products() {
           </li>
         ))}
       </ul>
+
+      <div>
+        <button
+          type="button"
+          onClick={() => setPage((p) => p - 1)}
+          disabled={page <= 1}
+        >
+          Previous
+        </button>{" "}
+        <span>
+          Page {pagination.page} of {pagination.totalPages}
+        </span>{" "}
+        <button
+          type="button"
+          onClick={() => setPage((p) => p + 1)}
+          disabled={page >= pagination.totalPages}
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }
