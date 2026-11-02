@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
@@ -11,6 +12,7 @@ const navLinkClass = ({ isActive }) =>
 function Layout() {
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
+  const [menuOpen, setMenuOpen] = useState(false);
 
   function handleLogout() {
     logout();
@@ -28,7 +30,35 @@ function Layout() {
             ShopSphere
           </Link>
 
-          <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-expanded={menuOpen}
+            aria-label="Toggle menu"
+            className="rounded-md p-2 text-slate-600 hover:bg-slate-100 sm:hidden"
+          >
+            <svg
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d={
+                  menuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"
+                }
+              />
+            </svg>
+          </button>
+
+          <div
+            onClick={() => setMenuOpen(false)}
+            className={`${menuOpen ? "flex" : "hidden"} absolute inset-x-0 top-full flex-col gap-1 border-b border-slate-200 bg-white p-4 shadow-md sm:static sm:flex sm:flex-row sm:items-center sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none`}
+          >
             <NavLink to="/products" className={navLinkClass}>
               Products
             </NavLink>
@@ -40,13 +70,13 @@ function Layout() {
                 <NavLink to="/orders" className={navLinkClass}>
                   Orders
                 </NavLink>
-                <span className="ml-3 hidden text-sm text-slate-500 sm:inline">
+                <span className="px-3 py-2 text-sm text-slate-500 sm:ml-3 sm:p-0">
                   Hi, {user.name}
                 </span>
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="ml-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+                  className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 sm:ml-2"
                 >
                   Logout
                 </button>
@@ -59,7 +89,7 @@ function Layout() {
                 </NavLink>
                 <Link
                   to="/register"
-                  className="ml-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+                  className="rounded-md bg-brand-600 px-4 py-2 text-center text-sm font-semibold text-white transition-colors hover:bg-brand-700 sm:ml-2"
                 >
                   Register
                 </Link>
