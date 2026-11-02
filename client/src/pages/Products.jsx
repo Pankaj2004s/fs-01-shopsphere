@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { getProducts } from "../api/products";
 
 const priceFormatter = new Intl.NumberFormat("en-IN", {
@@ -59,7 +60,9 @@ function Products() {
             {product.images[0] && (
               <img src={product.images[0]} alt={product.name} width="200" />
             )}
-            <h2>{product.name}</h2>
+            <h2>
+              <Link to={`/products/${product._id}`}>{product.name}</Link>
+            </h2>
             <p>{priceFormatter.format(product.price)}</p>
             <p>
               {product.category.name} by {product.vendor.name}
