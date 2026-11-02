@@ -23,7 +23,12 @@ function Layout() {
               </button>
             </>
           )}
-          {!loading && !user && <Link to="/login">Login</Link>}
+          {!loading && !user && (
+            <>
+              <Link to="/login">Login</Link>{" "}
+              <Link to="/register">Register</Link>
+            </>
+          )}
         </nav>
       </header>
 
