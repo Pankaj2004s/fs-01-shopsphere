@@ -2,11 +2,11 @@
 
 A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, Node.js).
 
-> Status: in development. Steps 1 to 5 (setup, authentication and roles, products and categories, cart and orders, automated tests) are complete.
+> Status: in development. Steps 1 to 6 (setup, authentication and roles, products and categories, cart and orders, automated tests, React client) are complete.
 
 ## Tech Stack
 
-- **Frontend:** React (Vite), JavaScript
+- **Frontend:** React 19 (Vite), JavaScript, React Router, Context API
 - **Backend:** Node.js, Express (ES modules)
 - **Database:** MongoDB with Mongoose
 - **Auth and validation:** JWT, bcryptjs, zod
@@ -32,12 +32,44 @@ A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, N
 - Centralized error handling with a custom `ApiError` class, Mongo duplicate, validation and cast errors mapped to 409 or 400, and safe messages in production
 - Automated test suite: 206 tests, including concurrency tests for stock reservation and double cancel
 
+## Client (React)
+
+The client talks to the API through one small fetch wrapper (`src/api/client.js`). It adds the base URL from `VITE_API_URL`, the JSON header and the Bearer token, and turns network and HTTP errors into a single `ApiError` with a `status` and the server message.
+
+- Register, login and logout; the token is kept in `localStorage` and checked with `GET /api/auth/me` when the page reloads
+- Auth state in a React Context (`AuthProvider` and a `useAuth` hook)
+- Protected routes: guests who open the cart or orders are sent to login and come back to the same page after logging in
+- Product list with loading, error and empty states, and pagination
+- Product detail page with an add-to-cart form (quantity limited by stock)
+- Cart page: change quantity, remove items, see line totals and the total from the server, place an order
+- Order history with pagination and a cancel button for pending and confirmed orders
+
+| Route           | Access         | Page                        |
+| --------------- | -------------- | --------------------------- |
+| `/`             | Public         | Home with API status        |
+| `/products`     | Public         | Product list                |
+| `/products/:id` | Public         | Product detail, add to cart |
+| `/login`        | Public         | Login                       |
+| `/register`     | Public         | Register                    |
+| `/cart`         | Logged-in user | Cart and place order        |
+| `/orders`       | Logged-in user | Order history and cancel    |
+| `*`             | Public         | 404 page                    |
+
+The route guard only decides what the UI shows. The real protection is the `protect` middleware on the server.
+
 ## Folder Structure
 
 ```
 fs-01-shopsphere/
 ├── client/                 # React app (Vite)
 │   └── src/
+│       ├── api/            # fetch wrapper and API functions (auth, products, cart, orders)
+│       ├── components/     # Layout (navbar, footer), ProtectedRoute
+│       ├── context/        # auth context and AuthProvider
+│       ├── hooks/          # useAuth
+│       ├── pages/          # Home, Products, ProductDetail, Cart, Orders, Login, Register, NotFound
+│       ├── App.jsx         # route table
+│       └── main.jsx        # entry point (StrictMode, BrowserRouter, AuthProvider)
 └── server/                 # Express API
     ├── tests/              # Vitest and Supertest tests
     │   └── helpers/        # database helpers and data factories
@@ -75,7 +107,11 @@ cd fs-01-shopsphere/server && npm install
 cd ../client && npm install
 ```
 
-2. Create `server/.env` using `server/.env.example` as a template.
+2. Create `server/.env` using `server/.env.example` as a template, and create `client/.env` by copying `client/.env.example`:
+
+```bash
+cp client/.env.example client/.env
+```
 
 3. (Optional) Load sample data:
 
@@ -92,6 +128,8 @@ cd client && npm run dev
 
 - API: http://localhost:5000/api/health
 - App: http://localhost:5173
+
+Restart the Vite dev server after you change `client/.env`, because Vite reads it only at startup.
 
 ## Testing
 
@@ -128,6 +166,8 @@ Latest result: 14 test files, 206 tests, all passing.
 
 ## Environment Variables
 
+### Server (`server/.env`)
+
 | Variable         | Description                                   |
 | ---------------- | --------------------------------------------- |
 | `PORT`           | Server port (default 5000)                    |
@@ -142,6 +182,14 @@ Generate a secret with:
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
+
+### Client (`client/.env`)
+
+| Variable       | Description                                                                   |
+| -------------- | ----------------------------------------------------------------------------- |
+| `VITE_API_URL` | Base URL of the API including `/api`, for example `http://localhost:5000/api` |
+
+Only variables that start with `VITE_` are visible to browser code. Never put a secret in them.
 
 ## API Endpoints
 
@@ -218,9 +266,12 @@ Send `PATCH /api/orders/:id/status` with a body like `{ "status": "shipped" }`.
 - Prices are stored as a Number in rupees. A production system would use integer paise.
 - Order status is on the whole order, not per item. If an order has items from more than one vendor, any of those vendors can change the status, and a cancel restores stock for all items. This behaviour is covered by a test.
 - MongoDB transactions need a replica set, so stock reservation uses atomic conditional updates plus a manual rollback. A server crash between the steps could leave stock reduced.
-- Two order requests from the same cart at the exact same time could create two orders. An idempotency key would prevent this.
+- Two order requests from the same cart at the exact same time could create two orders. An idempotency key would prevent this. The client only disables the button while the request runs.
 - Products are hard deleted. Orders keep a snapshot of name and price, so order history stays correct.
 - Tests need a local MongoDB and take about 2 minutes. There are no frontend tests yet.
+- The client keeps the JWT in `localStorage`, which JavaScript can read, so an XSS bug could steal it. An `httpOnly` cookie would be safer in production.
+- The seed products use random placeholder images (picsum.photos), so a picture does not match the product name.
+- The client has no styling yet, and there is no shipping address, payment or vendor dashboard.
 
 ## Commit Convention
 
@@ -233,3 +284,4 @@ This project follows Conventional Commits: `feat`, `fix`, `chore`, `docs`, `styl
 - [x] Step 3: Products, categories and vendor features
 - [x] Step 4: Cart and orders
 - [x] Step 5: Automated tests and coverage
+- [x] Step 6: React client (auth, products, cart, orders)
