@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getProducts } from "../api/products";
-
-const priceFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 0,
-});
+import { formatPrice } from "../utils/formatPrice";
 
 function Products() {
   const [products, setProducts] = useState([]);
@@ -63,7 +58,7 @@ function Products() {
             <h2>
               <Link to={`/products/${product._id}`}>{product.name}</Link>
             </h2>
-            <p>{priceFormatter.format(product.price)}</p>
+            <p>{formatPrice(product.price)}</p>
             <p>
               {product.category.name} by {product.vendor.name}
             </p>
