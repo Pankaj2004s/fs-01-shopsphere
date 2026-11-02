@@ -1,5 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Cart from "./pages/Cart";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -16,6 +18,9 @@ function App() {
         <Route path="products/:id" element={<ProductDetail />} />
         <Route path="login" element={<Login />} />
         <Route path="register" element={<Register />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="cart" element={<Cart />} />
+        </Route>
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
