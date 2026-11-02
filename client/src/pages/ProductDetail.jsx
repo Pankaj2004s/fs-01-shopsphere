@@ -49,7 +49,7 @@ function ProductDetail() {
     e.preventDefault();
 
     if (!user) {
-      navigate("/login");
+      navigate("/login", { state: { from: `/products/${id}` } });
       return;
     }
 
@@ -92,9 +92,7 @@ function ProductDetail() {
         {product.category.name} by {product.vendor.name}
       </p>
       <p>{product.description}</p>
-      <p>
-        {product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}
-      </p>
+      <p>{product.stock > 0 ? `${product.stock} in stock` : "Out of stock"}</p>
 
       {product.stock > 0 && (
         <form onSubmit={handleAddToCart}>
