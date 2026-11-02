@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { getCart, removeCartItem, updateCartItem } from "../api/cart";
+import { placeOrder } from "../api/orders";
 import { useAuth } from "../hooks/useAuth";
 
 const priceFormatter = new Intl.NumberFormat("en-IN", {
@@ -11,10 +12,12 @@ const priceFormatter = new Intl.NumberFormat("en-IN", {
 
 function Cart() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [cart, setCart] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
+  const [placing, setPlacing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -57,6 +60,18 @@ function Cart() {
     }
   }
 
+  async function handlePlaceOrder() {
+    setActionError("");
+    setPlacing(true);
+    try {
+      await placeOrder(token);
+      navigate("/orders");
+    } catch (err) {
+      setActionError(err.message);
+      setPlacing(false);
+    }
+  }
+
   if (loading) {
     return <p>Loading cart...</p>;
   }
@@ -82,7 +97,9 @@ function Cart() {
       <ul>
         {cart.items.map((item) => (
           <li key={item.product._id}>
-            <Link to={`/products/${item.product._id}`}>{item.product.name}</Link>
+            <Link to={`/products/${item.product._id}`}>
+              {item.product.name}
+            </Link>
             <p>{priceFormatter.format(item.product.price)} each</p>
             <label htmlFor={`qty-${item.product._id}`}>Quantity</label>{" "}
             <input
@@ -106,6 +123,9 @@ function Cart() {
         ))}
       </ul>
       <p>Total: {priceFormatter.format(cart.total)}</p>
+      <button type="button" onClick={handlePlaceOrder} disabled={placing}>
+        {placing ? "Placing order..." : "Place order"}
+      </button>
     </div>
   );
 }
