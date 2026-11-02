@@ -5,6 +5,7 @@ import Cart from "./pages/Cart";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Orders from "./pages/Orders";
 import ProductDetail from "./pages/ProductDetail";
 import Products from "./pages/Products";
 import Register from "./pages/Register";
@@ -20,6 +21,7 @@ function App() {
         <Route path="register" element={<Register />} />
         <Route element={<ProtectedRoute />}>
           <Route path="cart" element={<Cart />} />
+          <Route path="orders" element={<Orders />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>
