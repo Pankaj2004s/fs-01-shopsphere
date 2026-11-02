@@ -15,6 +15,7 @@ function Layout() {
       <header>
         <nav>
           <Link to="/">ShopSphere</Link>{" "}
+          <Link to="/products">Products</Link>{" "}
           {!loading && user && (
             <>
               <span>Hi, {user.name}</span>{" "}
