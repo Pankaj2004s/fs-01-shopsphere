@@ -46,7 +46,7 @@ function Products() {
               key={index}
               className="animate-pulse overflow-hidden rounded-xl border border-slate-200 bg-white"
             >
-              <div className="aspect-[4/3] bg-slate-200" />
+              <div className="aspect-4/3 bg-slate-200" />
               <div className="space-y-3 p-4">
                 <div className="h-3 w-1/3 rounded bg-slate-200" />
                 <div className="h-4 w-3/4 rounded bg-slate-200" />
@@ -89,7 +89,7 @@ function Products() {
               to={`/products/${product._id}`}
               className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md"
             >
-              <div className="aspect-[4/3] overflow-hidden bg-slate-100">
+              <div className="aspect-4/3 overflow-hidden bg-slate-100">
                 {product.images[0] && (
                   <img
                     src={product.images[0]}

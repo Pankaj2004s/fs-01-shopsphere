@@ -134,7 +134,7 @@ function Home() {
                   key={index}
                   className="overflow-hidden rounded-xl border border-slate-200 bg-white"
                 >
-                  <div className="aspect-[4/3] bg-slate-200" />
+                  <div className="aspect-4/3 bg-slate-200" />
                   <div className="space-y-3 p-4">
                     <div className="h-3 w-1/3 rounded bg-slate-200" />
                     <div className="h-4 w-3/4 rounded bg-slate-200" />

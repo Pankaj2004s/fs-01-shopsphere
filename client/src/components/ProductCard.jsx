@@ -7,7 +7,7 @@ function ProductCard({ product }) {
       to={`/products/${product._id}`}
       className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md"
     >
-      <div className="aspect-[4/3] overflow-hidden bg-slate-100">
+      <div className="aspect-4/3 overflow-hidden bg-slate-100">
         {product.images[0] && (
           <img
             src={product.images[0]}
