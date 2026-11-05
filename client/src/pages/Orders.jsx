@@ -2,12 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { cancelOrder, getOrders } from "../api/orders";
 import { useAuth } from "../hooks/useAuth";
-
-const priceFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 0,
-});
+import { formatPrice } from "../utils/formatPrice";
 
 const dateFormatter = new Intl.DateTimeFormat("en-IN", {
   dateStyle: "medium",
@@ -15,6 +10,16 @@ const dateFormatter = new Intl.DateTimeFormat("en-IN", {
 });
 
 const CANCELLABLE = ["pending", "confirmed"];
+
+const STATUS_STYLES = {
+  pending: "bg-amber-50 text-amber-700",
+  confirmed: "bg-blue-50 text-blue-700",
+  shipped: "bg-indigo-50 text-indigo-700",
+  delivered: "bg-emerald-50 text-emerald-700",
+  cancelled: "bg-red-50 text-red-700",
+};
+
+const DEFAULT_STATUS_STYLE = "bg-slate-100 text-slate-700";
 
 function Orders() {
   const { token } = useAuth();
@@ -66,69 +71,147 @@ function Orders() {
   }
 
   if (loading) {
-    return <p>Loading orders...</p>;
+    return (
+      <div>
+        <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">
+          Your orders
+        </h1>
+        <div className="animate-pulse space-y-4">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className="h-40 rounded-xl bg-slate-200" />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   if (error) {
-    return <p role="alert">{error}</p>;
+    return (
+      <p
+        role="alert"
+        className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+      >
+        {error}
+      </p>
+    );
   }
 
   if (orders.length === 0) {
     return (
-      <div>
-        <h1>Your orders</h1>
-        <p>You have no orders yet.</p>
-        <Link to="/products">Browse products</Link>
+      <div className="py-16 text-center">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          No orders yet
+        </h1>
+        <p className="mt-2 text-slate-500">
+          Your orders will show up here once you place one.
+        </p>
+        <Link
+          to="/products"
+          className="mt-6 inline-block rounded-lg bg-brand-600 px-6 py-3 font-semibold text-white transition hover:bg-brand-700 active:scale-95"
+        >
+          Browse products
+        </Link>
       </div>
     );
   }
 
   return (
     <div>
-      <h1>Your orders</h1>
-      {actionError && <p role="alert">{actionError}</p>}
-      <ul>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">
+        Your orders
+      </h1>
+
+      {actionError && (
+        <p
+          role="alert"
+          className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+        >
+          {actionError}
+        </p>
+      )}
+
+      <ul className="space-y-4">
         {orders.map((order) => (
-          <li key={order._id}>
-            <p>Placed on {dateFormatter.format(new Date(order.createdAt))}</p>
-            <p>Status: {order.status}</p>
-            <ul>
+          <li
+            key={order._id}
+            className="rounded-xl border border-slate-200 bg-white shadow-sm"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-4">
+              <div>
+                <p className="font-semibold text-slate-900">
+                  Order #{order._id.slice(-8)}
+                </p>
+                <p className="text-sm text-slate-500">
+                  Placed on {dateFormatter.format(new Date(order.createdAt))}
+                </p>
+              </div>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+                  STATUS_STYLES[order.status] ?? DEFAULT_STATUS_STYLE
+                }`}
+              >
+                {order.status}
+              </span>
+            </div>
+
+            <ul className="divide-y divide-slate-100 px-5">
               {order.items.map((item) => (
-                <li key={item.product}>
-                  {item.name} x {item.quantity} (
-                  {priceFormatter.format(item.price)} each)
+                <li
+                  key={item.product}
+                  className="flex items-center justify-between gap-4 py-3 text-sm"
+                >
+                  <div>
+                    <p className="font-medium text-slate-900">{item.name}</p>
+                    <p className="text-slate-500">
+                      {item.quantity} x {formatPrice(item.price)}
+                    </p>
+                  </div>
+                  <p className="font-medium text-slate-900">
+                    {formatPrice(item.price * item.quantity)}
+                  </p>
                 </li>
               ))}
             </ul>
-            <p>Total: {priceFormatter.format(order.totalAmount)}</p>
-            {CANCELLABLE.includes(order.status) && (
-              <button
-                type="button"
-                onClick={() => handleCancel(order._id)}
-                disabled={cancellingId === order._id}
-              >
-                {cancellingId === order._id ? "Cancelling..." : "Cancel order"}
-              </button>
-            )}
+
+            <div className="flex items-center justify-between border-t border-slate-200 px-5 py-4">
+              <p className="text-slate-900">
+                <span className="text-sm text-slate-500">Total </span>
+                <span className="text-lg font-bold">
+                  {formatPrice(order.totalAmount)}
+                </span>
+              </p>
+              {CANCELLABLE.includes(order.status) && (
+                <button
+                  type="button"
+                  onClick={() => handleCancel(order._id)}
+                  disabled={cancellingId === order._id}
+                  className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {cancellingId === order._id ? "Cancelling..." : "Cancel order"}
+                </button>
+              )}
+            </div>
           </li>
         ))}
       </ul>
 
-      <div>
+      <div className="mt-10 flex items-center justify-center gap-4">
         <button
           type="button"
           onClick={() => setPage((p) => p - 1)}
           disabled={page <= 1}
+          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
         >
           Previous
-        </button>{" "}
-        <span>
+        </button>
+        <span className="text-sm text-slate-600">
           Page {pagination.page} of {pagination.totalPages}
-        </span>{" "}
+        </span>
         <button
           type="button"
           onClick={() => setPage((p) => p + 1)}
           disabled={page >= pagination.totalPages}
+          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
         >
           Next
         </button>
