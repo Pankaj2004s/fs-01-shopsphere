@@ -73,6 +73,9 @@ const productsData = [
   },
 ];
 
+const placeholderImage = (name) =>
+  `https://placehold.co/800x600/EEF2FF/4338CA/png?text=${encodeURIComponent(name).replaceAll("%20", "+")}`;
+
 const seed = async () => {
   await mongoose.connect(env.mongoUri);
 
@@ -103,9 +106,7 @@ const seed = async () => {
   const docs = productsData.map(({ category, vendor, ...rest }) => ({
     ...rest,
     description: `${rest.name} - sample product for ShopSphere`,
-    images: [
-      `https://picsum.photos/seed/${encodeURIComponent(rest.name)}/400/300`,
-    ],
+    images: [placeholderImage(rest.name)],
     category: categories[category]._id,
     vendor: vendors[vendor]._id,
   }));
