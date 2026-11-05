@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { cancelOrder, getOrders } from "../api/orders";
+import Pagination from "../components/Pagination";
 import { useAuth } from "../hooks/useAuth";
 import { formatPrice } from "../utils/formatPrice";
 
@@ -195,27 +196,11 @@ function Orders() {
         ))}
       </ul>
 
-      <div className="mt-10 flex items-center justify-center gap-4">
-        <button
-          type="button"
-          onClick={() => setPage((p) => p - 1)}
-          disabled={page <= 1}
-          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
-        >
-          Previous
-        </button>
-        <span className="text-sm text-slate-600">
-          Page {pagination.page} of {pagination.totalPages}
-        </span>
-        <button
-          type="button"
-          onClick={() => setPage((p) => p + 1)}
-          disabled={page >= pagination.totalPages}
-          className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white"
-        >
-          Next
-        </button>
-      </div>
+      <Pagination
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        onPageChange={setPage}
+      />
     </div>
   );
 }
