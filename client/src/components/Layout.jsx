@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
+import {
+  Link,
+  NavLink,
+  Outlet,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
 const navLinkClass = ({ isActive }) =>
@@ -12,6 +18,7 @@ const navLinkClass = ({ isActive }) =>
 function Layout() {
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
   function handleLogout() {
@@ -49,7 +56,9 @@ function Layout() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 d={
-                  menuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"
+                  menuOpen
+                    ? "M6 18L18 6M6 6l12 12"
+                    : "M4 6h16M4 12h16M4 18h16"
                 }
               />
             </svg>
@@ -100,7 +109,12 @@ function Layout() {
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
-        <Outlet />
+        <div
+          key={location.pathname}
+          className="animate-fade-in motion-reduce:animate-none"
+        >
+          <Outlet />
+        </div>
       </main>
 
       <footer className="border-t border-slate-200 bg-white">
