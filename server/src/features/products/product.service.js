@@ -60,8 +60,12 @@ export const listProducts = async ({
   minPrice,
   maxPrice,
   sort,
-}) => {
+}, { vendorId } = {}) => {
   const filter = {};
+
+  if (vendorId) {
+    filter.vendor = vendorId;
+  }
 
   if (search) {
     filter.$text = { $search: search };
@@ -98,6 +102,9 @@ export const listProducts = async ({
     },
   };
 };
+
+export const listMyProducts = (vendorId, query) =>
+  listProducts(query, { vendorId });
 
 export const updateProduct = async (user, id, data) => {
   const product = await findProductForModification(user, id);
