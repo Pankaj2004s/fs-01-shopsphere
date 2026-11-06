@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import BecomeSeller from "./pages/BecomeSeller";
 import Cart from "./pages/Cart";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -22,6 +23,7 @@ function App() {
         <Route element={<ProtectedRoute />}>
           <Route path="cart" element={<Cart />} />
           <Route path="orders" element={<Orders />} />
+          <Route path="become-seller" element={<BecomeSeller />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>
