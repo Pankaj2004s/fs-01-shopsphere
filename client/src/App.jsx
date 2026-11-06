@@ -1,6 +1,7 @@
 import { Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import VendorRoute from "./components/VendorRoute";
 import BecomeSeller from "./pages/BecomeSeller";
 import Cart from "./pages/Cart";
 import Home from "./pages/Home";
@@ -10,6 +11,7 @@ import Orders from "./pages/Orders";
 import ProductDetail from "./pages/ProductDetail";
 import Products from "./pages/Products";
 import Register from "./pages/Register";
+import VendorProducts from "./pages/vendor/VendorProducts";
 
 function App() {
   return (
@@ -24,6 +26,9 @@ function App() {
           <Route path="cart" element={<Cart />} />
           <Route path="orders" element={<Orders />} />
           <Route path="become-seller" element={<BecomeSeller />} />
+        </Route>
+        <Route path="vendor" element={<VendorRoute />}>
+          <Route path="products" element={<VendorProducts />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>
