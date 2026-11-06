@@ -16,6 +16,14 @@ export const list = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+export const listMine = asyncHandler(async (req, res) => {
+  const result = await productService.listMyProducts(
+    req.user._id,
+    req.validated.query,
+  );
+  res.status(200).json(result);
+});
+
 export const update = asyncHandler(async (req, res) => {
   const product = await productService.updateProduct(
     req.user,
