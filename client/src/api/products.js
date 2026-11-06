@@ -1,16 +1,12 @@
 import { api } from "./client";
+import { buildQuery } from "../utils/buildQuery";
 
 export function getProducts(params = {}) {
-  const query = new URLSearchParams();
+  return api.get(`/products${buildQuery(params)}`);
+}
 
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== "") {
-      query.set(key, value);
-    }
-  });
-
-  const queryString = query.toString();
-  return api.get(`/products${queryString ? `?${queryString}` : ""}`);
+export function getMyProducts(params = {}, token) {
+  return api.get(`/products/mine${buildQuery(params)}`, { token });
 }
 
 export function getProduct(id) {
