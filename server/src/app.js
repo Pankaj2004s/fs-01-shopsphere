@@ -1,3 +1,4 @@
+import path from "node:path";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -10,6 +11,7 @@ import productRoutes from "./features/products/product.routes.js";
 import cartRoutes from "./features/cart/cart.routes.js";
 import orderRoutes from "./features/orders/order.routes.js";
 import userRoutes from "./features/users/user.routes.js";
+import uploadRoutes from "./features/uploads/upload.routes.js";
 import { notFound } from "./middlewares/notFound.js";
 import errorHandler from "./middlewares/errorHandler.js";
 
@@ -22,6 +24,15 @@ if (env.nodeEnv !== "test") {
 }
 app.use(express.json());
 
+app.use(
+  "/uploads",
+  express.static(path.resolve(env.uploadDir), {
+    setHeaders: (res) => {
+      res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    },
+  }),
+);
+
 app.use("/api/health", healthRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
@@ -29,6 +40,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/uploads", uploadRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
