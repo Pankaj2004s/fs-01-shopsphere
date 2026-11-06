@@ -20,6 +20,13 @@ const errorHandler = (err, req, res, next) => {
     status = 400;
     message = `Invalid ${err.path}: ${err.value}`;
     isOperational = true;
+  } else if (err.name === "MulterError") {
+    status = err.code === "LIMIT_FILE_SIZE" ? 413 : 400;
+    message =
+      err.code === "LIMIT_FILE_SIZE"
+        ? "Image is too large, maximum size is 5 MB"
+        : err.message;
+    isOperational = true;
   }
 
   if (env.nodeEnv !== "test") {
