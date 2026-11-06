@@ -7,11 +7,25 @@ import {
   listProductsQuerySchema,
   productIdParamSchema,
 } from "./product.schemas.js";
-import { create, getOne, list, update, remove } from "./product.controller.js";
+import {
+  create,
+  getOne,
+  list,
+  listMine,
+  update,
+  remove,
+} from "./product.controller.js";
 
 const router = Router();
 
 router.get("/", validate(listProductsQuerySchema, "query"), list);
+router.get(
+  "/mine",
+  protect,
+  authorize("vendor", "admin"),
+  validate(listProductsQuerySchema, "query"),
+  listMine,
+);
 router.get("/:id", validate(productIdParamSchema, "params"), getOne);
 router.post(
   "/",
