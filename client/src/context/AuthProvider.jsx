@@ -50,7 +50,11 @@ function AuthProvider({ children }) {
     setUser(null);
   }
 
-  const value = { user, token, loading, login, logout };
+  function updateUser(nextUser) {
+    setUser(nextUser);
+  }
+
+  const value = { user, token, loading, login, logout, updateUser };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
