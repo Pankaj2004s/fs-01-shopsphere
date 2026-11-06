@@ -65,6 +65,45 @@ describe("errorHandler", () => {
     expect(res.json).toHaveBeenCalledWith({ message: "Invalid _id: abc" });
   });
 
+  it("maps a multer file size error to 413 with a friendly message", () => {
+    const res = run({
+      name: "MulterError",
+      code: "LIMIT_FILE_SIZE",
+      message: "File too large",
+    });
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Image is too large, maximum size is 5 MB",
+    });
+  });
+
+  it("maps any other multer error to 400 and keeps its message", () => {
+    const res = run({
+      name: "MulterError",
+      code: "LIMIT_UNEXPECTED_FILE",
+      message: "Unexpected field",
+    });
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ message: "Unexpected field" });
+  });
+
+  it("still shows the multer message in production", () => {
+    env.nodeEnv = "production";
+
+    const res = run({
+      name: "MulterError",
+      code: "LIMIT_FILE_SIZE",
+      message: "File too large",
+    });
+
+    expect(res.status).toHaveBeenCalledWith(413);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Image is too large, maximum size is 5 MB",
+    });
+  });
+
   it("returns 500 with the real message outside production", () => {
     const res = run(new Error("Database exploded"));
 
