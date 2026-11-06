@@ -1,20 +1,16 @@
 import { api } from "./client";
+import { buildQuery } from "../utils/buildQuery";
 
 export function placeOrder(token) {
   return api.post("/orders", undefined, { token });
 }
 
 export function getOrders(params = {}, token) {
-  const query = new URLSearchParams();
+  return api.get(`/orders${buildQuery(params)}`, { token });
+}
 
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== "") {
-      query.set(key, value);
-    }
-  });
-
-  const queryString = query.toString();
-  return api.get(`/orders${queryString ? `?${queryString}` : ""}`, { token });
+export function getVendorOrders(params = {}, token) {
+  return api.get(`/orders/vendor${buildQuery(params)}`, { token });
 }
 
 export function getOrder(id, token) {
