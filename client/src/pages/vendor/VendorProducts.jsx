@@ -8,6 +8,9 @@ import { formatPrice } from "../../utils/formatPrice";
 const addButtonClass =
   "inline-block rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 active:scale-95";
 
+const rowButtonClass =
+  "hidden rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 sm:inline-block";
+
 function VendorProducts() {
   const { token } = useAuth();
   const [products, setProducts] = useState([]);
@@ -132,11 +135,14 @@ function VendorProducts() {
               )}
             </div>
 
-            <Link
-              to={`/products/${product._id}`}
-              className="hidden rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 sm:inline-block"
-            >
+            <Link to={`/products/${product._id}`} className={rowButtonClass}>
               View
+            </Link>
+            <Link
+              to={`/vendor/products/${product._id}/edit`}
+              className={rowButtonClass}
+            >
+              Edit
             </Link>
           </li>
         ))}
