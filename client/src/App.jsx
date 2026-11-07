@@ -11,6 +11,7 @@ import Orders from "./pages/Orders";
 import ProductDetail from "./pages/ProductDetail";
 import Products from "./pages/Products";
 import Register from "./pages/Register";
+import Dashboard from "./pages/vendor/Dashboard";
 import ProductForm from "./pages/vendor/ProductForm";
 import VendorOrders from "./pages/vendor/VendorOrders";
 import VendorProducts from "./pages/vendor/VendorProducts";
@@ -30,6 +31,7 @@ function App() {
           <Route path="become-seller" element={<BecomeSeller />} />
         </Route>
         <Route path="vendor" element={<VendorRoute />}>
+          <Route path="dashboard" element={<Dashboard />} />
           <Route path="products" element={<VendorProducts />} />
           <Route path="products/new" element={<ProductForm />} />
           <Route path="products/:id/edit" element={<ProductForm />} />
