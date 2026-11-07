@@ -10,20 +10,23 @@ export class ApiError extends Error {
 }
 
 async function request(path, { method = "GET", body, token } = {}) {
+  const isFormData = body instanceof FormData;
   const headers = {};
-  if (body !== undefined) {
+  if (body !== undefined && !isFormData) {
     headers["Content-Type"] = "application/json";
   }
   if (token) {
     headers.Authorization = `Bearer ${token}`;
   }
 
+  const payload = body !== undefined && !isFormData ? JSON.stringify(body) : body;
+
   let res;
   try {
     res = await fetch(`${BASE_URL}${path}`, {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: payload,
     });
   } catch {
     throw new ApiError("Server not reachable", 0, null);
