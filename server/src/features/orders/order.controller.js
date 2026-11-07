@@ -30,6 +30,11 @@ export const listVendor = asyncHandler(async (req, res) => {
   res.status(200).json(result);
 });
 
+export const vendorStats = asyncHandler(async (req, res) => {
+  const stats = await orderService.getVendorStats(req.user._id);
+  res.status(200).json({ stats });
+});
+
 export const updateStatus = asyncHandler(async (req, res) => {
   const order = await orderService.updateOrderStatus(
     req.user._id,
