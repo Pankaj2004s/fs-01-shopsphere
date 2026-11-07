@@ -1,6 +1,10 @@
 import ApiError from "../../utils/ApiError.js";
 import Category from "../categories/category.model.js";
 import Product from "./product.model.js";
+import { getOrSet } from "../../utils/cache.js";
+
+const PRODUCTS_NAMESPACE = "products";
+const PRODUCTS_TTL_SECONDS = 60;
 
 const productPopulate = [
   { path: "category", select: "name slug" },
@@ -52,7 +56,7 @@ export const getProductById = async (id) => {
   return product;
 };
 
-export const listProducts = async ({
+const queryProducts = async ({
   page,
   limit,
   search,
@@ -101,6 +105,16 @@ export const listProducts = async ({
       totalPages: Math.ceil(total / limit),
     },
   };
+};
+
+export const listProducts = async (query, { vendorId } = {}) => {
+  if (vendorId) {
+    return queryProducts(query, { vendorId });
+  }
+
+  return getOrSet(PRODUCTS_NAMESPACE, query, PRODUCTS_TTL_SECONDS, () =>
+    queryProducts(query),
+  );
 };
 
 export const listMyProducts = (vendorId, query) =>
