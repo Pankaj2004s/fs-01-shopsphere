@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { getCategories } from "../../api/categories";
-import { createProduct } from "../../api/products";
+import { createProduct, getProduct, updateProduct } from "../../api/products";
 import { uploadImage } from "../../api/uploads";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -11,11 +11,15 @@ const inputClass =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30";
 
 function ProductForm() {
+  const { id } = useParams();
+  const isEdit = Boolean(id);
   const { token } = useAuth();
   const navigate = useNavigate();
 
   const [categories, setCategories] = useState([]);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [productLoading, setProductLoading] = useState(isEdit);
+  const [loadError, setLoadError] = useState("");
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -49,6 +53,36 @@ function ProductForm() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!id) return;
+
+    let cancelled = false;
+
+    async function loadProduct() {
+      try {
+        const data = await getProduct(id);
+        if (cancelled) return;
+        const product = data.product;
+        setName(product.name);
+        setDescription(product.description);
+        setPrice(String(product.price));
+        setStock(String(product.stock));
+        setCategory(product.category._id);
+        setImages(product.images);
+      } catch (err) {
+        if (!cancelled) setLoadError(err.message);
+      } finally {
+        if (!cancelled) setProductLoading(false);
+      }
+    }
+
+    loadProduct();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
   async function handleFileChange(e) {
     const files = Array.from(e.target.files).slice(0, MAX_IMAGES - images.length);
     e.target.value = "";
@@ -81,24 +115,55 @@ function ProductForm() {
     setError("");
     setSubmitting(true);
 
+    const payload = {
+      name,
+      description,
+      price: Number(price),
+      stock: Number(stock),
+      category,
+      images,
+    };
+
     try {
-      await createProduct(
-        {
-          name,
-          description,
-          price: Number(price),
-          stock: Number(stock),
-          category,
-          images,
-        },
-        token,
-      );
+      if (isEdit) {
+        await updateProduct(id, payload, token);
+      } else {
+        await createProduct(payload, token);
+      }
       navigate("/vendor/products");
     } catch (err) {
       setError(err.message);
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (productLoading) {
+    return (
+      <div className="mx-auto w-full max-w-2xl animate-pulse space-y-4">
+        <div className="h-8 w-1/3 rounded bg-slate-200" />
+        <div className="h-96 rounded-2xl bg-slate-200" />
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="mx-auto w-full max-w-2xl space-y-4">
+        <p
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        >
+          {loadError}
+        </p>
+        <Link
+          to="/vendor/products"
+          className="inline-block text-sm font-medium text-brand-600 hover:text-brand-700"
+        >
+          ← Back to my products
+        </Link>
+      </div>
+    );
   }
 
   return (
@@ -112,7 +177,7 @@ function ProductForm() {
 
       <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Add a product
+          {isEdit ? "Edit product" : "Add a product"}
         </h1>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
