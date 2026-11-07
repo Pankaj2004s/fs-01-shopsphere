@@ -5,6 +5,9 @@ import Pagination from "../../components/Pagination";
 import { useAuth } from "../../hooks/useAuth";
 import { formatPrice } from "../../utils/formatPrice";
 
+const addButtonClass =
+  "inline-block rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-brand-700 active:scale-95";
+
 function VendorProducts() {
   const { token } = useAuth();
   const [products, setProducts] = useState([]);
@@ -72,15 +75,23 @@ function VendorProducts() {
         <p className="mt-2 text-slate-500">
           Products you list will show up here.
         </p>
+        <Link to="/vendor/products/new" className={`mt-6 ${addButtonClass}`}>
+          Add product
+        </Link>
       </div>
     );
   }
 
   return (
     <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">
-        My products
-      </h1>
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+          My products
+        </h1>
+        <Link to="/vendor/products/new" className={addButtonClass}>
+          Add product
+        </Link>
+      </div>
 
       <ul className="space-y-3">
         {products.map((product) => (
