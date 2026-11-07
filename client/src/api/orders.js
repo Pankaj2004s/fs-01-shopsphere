@@ -17,6 +17,10 @@ export function getOrder(id, token) {
   return api.get(`/orders/${id}`, { token });
 }
 
+export function updateOrderStatus(id, status, token) {
+  return api.patch(`/orders/${id}/status`, { status }, { token });
+}
+
 export function cancelOrder(id, token) {
-  return api.patch(`/orders/${id}/status`, { status: "cancelled" }, { token });
+  return updateOrderStatus(id, "cancelled", token);
 }
