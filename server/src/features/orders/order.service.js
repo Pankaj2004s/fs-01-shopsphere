@@ -2,7 +2,10 @@ import Cart from "../cart/cart.model.js";
 import Product from "../products/product.model.js";
 import Order, { ORDER_STATUSES } from "./order.model.js";
 import ApiError from "../../utils/ApiError.js";
+import { invalidate } from "../../utils/cache.js";
 import { canActorSet, canTransition } from "./order.transitions.js";
+
+const PRODUCTS_NAMESPACE = "products";
 
 const releaseStock = async (reserved) => {
   await Promise.all(
@@ -10,6 +13,7 @@ const releaseStock = async (reserved) => {
       Product.updateOne({ _id: product }, { $inc: { stock: quantity } }),
     ),
   );
+  await invalidate(PRODUCTS_NAMESPACE);
 };
 
 export const placeOrder = async (userId) => {
@@ -68,6 +72,8 @@ export const placeOrder = async (userId) => {
     await releaseStock(reserved);
     throw error;
   }
+
+  await invalidate(PRODUCTS_NAMESPACE);
 
   await Cart.updateOne({ user: userId }, { $set: { items: [] } });
 
