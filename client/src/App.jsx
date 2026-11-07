@@ -31,6 +31,7 @@ function App() {
         <Route path="vendor" element={<VendorRoute />}>
           <Route path="products" element={<VendorProducts />} />
           <Route path="products/new" element={<ProductForm />} />
+          <Route path="products/:id/edit" element={<ProductForm />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>
