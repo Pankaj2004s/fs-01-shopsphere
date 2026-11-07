@@ -2,7 +2,10 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { getCategories } from "../../api/categories";
 import { createProduct } from "../../api/products";
+import { uploadImage } from "../../api/uploads";
 import { useAuth } from "../../hooks/useAuth";
+
+const MAX_IMAGES = 5;
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30";
@@ -19,6 +22,8 @@ function ProductForm() {
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("0");
   const [category, setCategory] = useState("");
+  const [images, setImages] = useState([]);
+  const [uploading, setUploading] = useState(false);
 
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -44,6 +49,33 @@ function ProductForm() {
     };
   }, []);
 
+  async function handleFileChange(e) {
+    const files = Array.from(e.target.files).slice(0, MAX_IMAGES - images.length);
+    e.target.value = "";
+
+    if (files.length === 0) return;
+
+    setError("");
+    setUploading(true);
+
+    try {
+      const uploaded = [];
+      for (const file of files) {
+        const data = await uploadImage(file, token);
+        uploaded.push(data.url);
+      }
+      setImages((current) => [...current, ...uploaded]);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleRemoveImage(url) {
+    setImages((current) => current.filter((item) => item !== url));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -57,6 +89,7 @@ function ProductForm() {
           price: Number(price),
           stock: Number(stock),
           category,
+          images,
         },
         token,
       );
@@ -183,6 +216,48 @@ function ProductForm() {
             </select>
           </div>
 
+          <div>
+            <label
+              htmlFor="images"
+              className="block text-sm font-medium text-slate-700"
+            >
+              Images (up to {MAX_IMAGES}, JPEG, PNG or WebP, max 5 MB each)
+            </label>
+            <input
+              id="images"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              onChange={handleFileChange}
+              disabled={uploading || images.length >= MAX_IMAGES}
+              className="mt-1 block w-full text-sm text-slate-600 file:mr-4 file:rounded-lg file:border-0 file:bg-brand-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-brand-700 hover:file:bg-brand-100 disabled:opacity-60"
+            />
+            {uploading && (
+              <p className="mt-2 text-sm text-slate-500">Uploading...</p>
+            )}
+            {images.length > 0 && (
+              <ul className="mt-3 grid grid-cols-3 gap-3 sm:grid-cols-5">
+                {images.map((url) => (
+                  <li key={url} className="relative">
+                    <img
+                      src={url}
+                      alt="Product preview"
+                      className="aspect-square w-full rounded-lg border border-slate-200 object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(url)}
+                      aria-label="Remove image"
+                      className="absolute -right-2 -top-2 h-6 w-6 rounded-full bg-red-600 text-xs font-bold text-white shadow hover:bg-red-700"
+                    >
+                      ×
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           {error && (
             <p
               role="alert"
@@ -194,7 +269,7 @@ function ProductForm() {
 
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || uploading}
             className="w-full rounded-lg bg-brand-600 px-4 py-2.5 font-semibold text-white transition hover:bg-brand-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? "Saving..." : "Save product"}
