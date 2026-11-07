@@ -12,3 +12,15 @@ export function getMyProducts(params = {}, token) {
 export function getProduct(id) {
   return api.get(`/products/${id}`);
 }
+
+export function createProduct(data, token) {
+  return api.post("/products", data, { token });
+}
+
+export function updateProduct(id, data, token) {
+  return api.patch(`/products/${id}`, data, { token });
+}
+
+export function deleteProduct(id, token) {
+  return api.delete(`/products/${id}`, { token });
+}
