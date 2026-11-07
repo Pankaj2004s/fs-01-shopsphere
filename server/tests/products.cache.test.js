@@ -168,4 +168,29 @@ describe("product list cache", () => {
     expect(placed.status).toBe(201);
     expect(after.body.products[0].stock).toBe(8);
   });
+
+  it("shows the restored stock right away after an order is cancelled", async () => {
+    const { user: vendor } = await createUser({ role: "vendor" });
+    const { user: customer, token } = await createUser();
+    const product = await createProduct({ vendor: vendor._id, stock: 10 });
+    await Cart.create({
+      user: customer._id,
+      items: [{ product: product._id, quantity: 2 }],
+    });
+    const placed = await request(app)
+      .post("/api/orders")
+      .set("Authorization", bearer(token));
+    expect(placed.status).toBe(201);
+    const warm = await listPublic();
+    expect(warm.body.products[0].stock).toBe(8);
+
+    const cancelled = await request(app)
+      .patch(`/api/orders/${placed.body.order._id}/status`)
+      .set("Authorization", bearer(token))
+      .send({ status: "cancelled" });
+    const after = await listPublic();
+
+    expect(cancelled.status).toBe(200);
+    expect(after.body.products[0].stock).toBe(10);
+  });
 });
