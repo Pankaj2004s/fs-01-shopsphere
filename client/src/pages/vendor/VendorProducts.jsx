@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getMyProducts } from "../../api/products";
+import { deleteProduct, getMyProducts } from "../../api/products";
 import Pagination from "../../components/Pagination";
 import { useAuth } from "../../hooks/useAuth";
 import { formatPrice } from "../../utils/formatPrice";
@@ -11,6 +11,9 @@ const addButtonClass =
 const rowButtonClass =
   "hidden rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 sm:inline-block";
 
+const deleteButtonClass =
+  "hidden rounded-md border border-red-300 px-3 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 sm:inline-block";
+
 function VendorProducts() {
   const { token } = useAuth();
   const [products, setProducts] = useState([]);
@@ -18,6 +21,8 @@ function VendorProducts() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,6 +47,26 @@ function VendorProducts() {
       cancelled = true;
     };
   }, [page, token]);
+
+  async function handleDelete(product) {
+    if (!window.confirm(`Delete "${product.name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    setActionError("");
+    setDeletingId(product._id);
+
+    try {
+      await deleteProduct(product._id, token);
+      setProducts((current) =>
+        current.filter((item) => item._id !== product._id),
+      );
+    } catch (err) {
+      setActionError(err.message);
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -96,6 +121,15 @@ function VendorProducts() {
         </Link>
       </div>
 
+      {actionError && (
+        <p
+          role="alert"
+          className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+        >
+          {actionError}
+        </p>
+      )}
+
       <ul className="space-y-3">
         {products.map((product) => (
           <li
@@ -144,6 +178,14 @@ function VendorProducts() {
             >
               Edit
             </Link>
+            <button
+              type="button"
+              onClick={() => handleDelete(product)}
+              disabled={deletingId === product._id}
+              className={deleteButtonClass}
+            >
+              {deletingId === product._id ? "Deleting..." : "Delete"}
+            </button>
           </li>
         ))}
       </ul>
