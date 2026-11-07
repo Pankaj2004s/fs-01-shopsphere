@@ -89,6 +89,11 @@ function Layout() {
                     My products
                   </NavLink>
                 )}
+                {user.role === "vendor" && (
+                  <NavLink to="/vendor/orders" className={navLinkClass}>
+                    Customer orders
+                  </NavLink>
+                )}
                 <span className="px-3 py-2 text-sm text-slate-500 sm:ml-3 sm:p-0">
                   Hi, {user.name}
                 </span>
