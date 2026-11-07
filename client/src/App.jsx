@@ -11,6 +11,7 @@ import Orders from "./pages/Orders";
 import ProductDetail from "./pages/ProductDetail";
 import Products from "./pages/Products";
 import Register from "./pages/Register";
+import ProductForm from "./pages/vendor/ProductForm";
 import VendorProducts from "./pages/vendor/VendorProducts";
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
         </Route>
         <Route path="vendor" element={<VendorRoute />}>
           <Route path="products" element={<VendorProducts />} />
+          <Route path="products/new" element={<ProductForm />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Route>
