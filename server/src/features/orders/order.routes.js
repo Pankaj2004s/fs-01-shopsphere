@@ -11,6 +11,7 @@ import {
   list,
   getOne,
   listVendor,
+  vendorStats,
   updateStatus,
 } from "./order.controller.js";
 
@@ -26,6 +27,7 @@ router.get(
   validate(listOrdersQuerySchema, "query"),
   listVendor,
 );
+router.get("/vendor/stats", authorize("vendor"), vendorStats);
 router.get("/:id", validate(orderIdParamSchema, "params"), getOne);
 router.patch(
   "/:id/status",
