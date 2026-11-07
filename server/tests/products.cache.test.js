@@ -11,6 +11,7 @@ import request from "supertest";
 import app from "../src/app.js";
 import { env } from "../src/config/env.js";
 import { redis, connectRedis, disconnectRedis } from "../src/config/redis.js";
+import Cart from "../src/features/cart/cart.model.js";
 import { connectTestDB, clearDB, disconnectTestDB } from "./helpers/db.js";
 import { createUser } from "./helpers/factories.js";
 import { createCategory, createProduct } from "./helpers/catalogFactories.js";
@@ -146,5 +147,25 @@ describe("product list cache", () => {
     expect(before.body.pagination.total).toBe(0);
     expect(after.body.pagination.total).toBe(1);
     expect(await redis.keys("cache:*")).toEqual([]);
+  });
+
+  it("shows the reduced stock right away after an order is placed", async () => {
+    const { user: vendor } = await createUser({ role: "vendor" });
+    const { user: customer, token } = await createUser();
+    const product = await createProduct({ vendor: vendor._id, stock: 10 });
+    await Cart.create({
+      user: customer._id,
+      items: [{ product: product._id, quantity: 2 }],
+    });
+    const warm = await listPublic();
+    expect(warm.body.products[0].stock).toBe(10);
+
+    const placed = await request(app)
+      .post("/api/orders")
+      .set("Authorization", bearer(token));
+    const after = await listPublic();
+
+    expect(placed.status).toBe(201);
+    expect(after.body.products[0].stock).toBe(8);
   });
 });
