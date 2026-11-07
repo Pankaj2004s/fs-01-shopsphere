@@ -13,6 +13,10 @@ export function getVendorOrders(params = {}, token) {
   return api.get(`/orders/vendor${buildQuery(params)}`, { token });
 }
 
+export function getVendorStats(token) {
+  return api.get("/orders/vendor/stats", { token });
+}
+
 export function getOrder(id, token) {
   return api.get(`/orders/${id}`, { token });
 }
