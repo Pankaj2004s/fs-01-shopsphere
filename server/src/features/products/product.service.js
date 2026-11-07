@@ -1,7 +1,7 @@
 import ApiError from "../../utils/ApiError.js";
 import Category from "../categories/category.model.js";
 import Product from "./product.model.js";
-import { getOrSet } from "../../utils/cache.js";
+import { getOrSet, invalidate } from "../../utils/cache.js";
 
 const PRODUCTS_NAMESPACE = "products";
 const PRODUCTS_TTL_SECONDS = 60;
@@ -42,6 +42,7 @@ export const createProduct = async (vendorId, data) => {
   }
 
   const product = await Product.create({ ...data, vendor: vendorId });
+  await invalidate(PRODUCTS_NAMESPACE);
 
   return product.populate(productPopulate);
 };
@@ -133,6 +134,7 @@ export const updateProduct = async (user, id, data) => {
 
   product.set(data);
   await product.save();
+  await invalidate(PRODUCTS_NAMESPACE);
 
   return product.populate(productPopulate);
 };
@@ -141,4 +143,5 @@ export const deleteProduct = async (user, id) => {
   const product = await findProductForModification(user, id);
 
   await product.deleteOne();
+  await invalidate(PRODUCTS_NAMESPACE);
 };
