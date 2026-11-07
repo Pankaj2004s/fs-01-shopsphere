@@ -1,6 +1,6 @@
 import Cart from "../cart/cart.model.js";
 import Product from "../products/product.model.js";
-import Order from "./order.model.js";
+import Order, { ORDER_STATUSES } from "./order.model.js";
 import ApiError from "../../utils/ApiError.js";
 import { canActorSet, canTransition } from "./order.transitions.js";
 
@@ -101,6 +101,9 @@ export const getMyOrder = async (userId, orderId) => {
   return order;
 };
 
+const REVENUE_STATUSES = ["confirmed", "shipped", "delivered"];
+const LOW_STOCK_LIMIT = 5;
+
 const toVendorView = (order, vendorId) => {
   const items = order.items.filter((item) => item.vendor.equals(vendorId));
   const subtotal = items.reduce(
@@ -186,4 +189,61 @@ export const updateOrderStatus = async (userId, orderId, newStatus) => {
   }
 
   return updated;
+};
+
+export const getVendorStats = async (vendorId) => {
+  const [orderRows, productCount, lowStock] = await Promise.all([
+    Order.aggregate([
+      { $match: { "items.vendor": vendorId } },
+      { $unwind: "$items" },
+      { $match: { "items.vendor": vendorId } },
+      {
+        $group: {
+          _id: { order: "$_id", status: "$status" },
+          subtotal: {
+            $sum: { $multiply: ["$items.price", "$items.quantity"] },
+          },
+          units: { $sum: "$items.quantity" },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id.status",
+          orders: { $sum: 1 },
+          subtotal: { $sum: "$subtotal" },
+          units: { $sum: "$units" },
+        },
+      },
+    ]),
+    Product.countDocuments({ vendor: vendorId }),
+    Product.find({ vendor: vendorId, stock: { $lte: LOW_STOCK_LIMIT } })
+      .sort({ stock: 1, _id: 1 })
+      .limit(5)
+      .select("name stock"),
+  ]);
+
+  const statusCounts = Object.fromEntries(
+    ORDER_STATUSES.map((status) => [status, 0]),
+  );
+  let totalOrders = 0;
+  let revenue = 0;
+  let unitsSold = 0;
+
+  for (const row of orderRows) {
+    statusCounts[row._id] = row.orders;
+    totalOrders += row.orders;
+    if (REVENUE_STATUSES.includes(row._id)) {
+      revenue += row.subtotal;
+      unitsSold += row.units;
+    }
+  }
+
+  return {
+    totalOrders,
+    revenue,
+    unitsSold,
+    statusCounts,
+    productCount,
+    lowStock,
+  };
 };
