@@ -10,6 +10,7 @@ export default defineConfig({
       JWT_SECRET: "test_secret_only_for_automated_tests",
       UPLOAD_DIR: path.join(os.tmpdir(), "shopsphere-test-uploads"),
       REDIS_URL: "redis://127.0.0.1:6379/1",
+      SEARCH_ENGINE: "mongodb",
     },
     fileParallelism: false,
     coverage: {
