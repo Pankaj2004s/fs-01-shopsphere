@@ -17,3 +17,11 @@ export const confirm = asyncHandler(async (req, res) => {
   );
   res.status(200).json({ order });
 });
+
+export const webhook = asyncHandler(async (req, res) => {
+  await paymentService.processWebhook(
+    req.body,
+    req.get("x-razorpay-signature"),
+  );
+  res.status(200).json({ received: true });
+});
