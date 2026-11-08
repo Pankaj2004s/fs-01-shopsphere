@@ -3,6 +3,7 @@ import Product from "../products/product.model.js";
 import Order, { ORDER_STATUSES } from "./order.model.js";
 import ApiError from "../../utils/ApiError.js";
 import { invalidate } from "../../utils/cache.js";
+import { syncProductsByIds } from "../search/product.sync.js";
 import { canActorSet, canTransition } from "./order.transitions.js";
 
 const PRODUCTS_NAMESPACE = "products";
@@ -13,6 +14,7 @@ const releaseStock = async (reserved) => {
       Product.updateOne({ _id: product }, { $inc: { stock: quantity } }),
     ),
   );
+  await syncProductsByIds(reserved.map(({ product }) => product));
   await invalidate(PRODUCTS_NAMESPACE);
 };
 
@@ -73,6 +75,7 @@ export const placeOrder = async (userId) => {
     throw error;
   }
 
+  await syncProductsByIds(items.map((item) => item.product));
   await invalidate(PRODUCTS_NAMESPACE);
 
   await Cart.updateOne({ user: userId }, { $set: { items: [] } });
