@@ -1,29 +1,65 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { getProducts } from "../api/products";
 import Pagination from "../components/Pagination";
 import ProductCard from "../components/ProductCard";
+import ProductFilters from "../components/ProductFilters";
+
+const QUERY_KEYS = ["search", "category", "minPrice", "maxPrice", "sort", "page"];
+const DEFAULT_SORT = "newest";
 
 function Products() {
-  const [products, setProducts] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [result, setResult] = useState({
+    key: null,
+    products: [],
+    pagination: null,
+    error: "",
+  });
+
+  const queryString = searchParams.toString();
+  const values = {
+    search: searchParams.get("search") ?? "",
+    category: searchParams.get("category") ?? "",
+    minPrice: searchParams.get("minPrice") ?? "",
+    maxPrice: searchParams.get("maxPrice") ?? "",
+    sort: searchParams.get("sort") ?? DEFAULT_SORT,
+  };
+  const hasFilters =
+    Boolean(
+      values.search || values.category || values.minPrice || values.maxPrice,
+    ) || values.sort !== DEFAULT_SORT;
+  const loading = result.key !== queryString;
 
   useEffect(() => {
     let cancelled = false;
+    const current = new URLSearchParams(queryString);
+    const params = {};
+
+    for (const key of QUERY_KEYS) {
+      if (current.has(key)) params[key] = current.get(key);
+    }
 
     async function loadProducts() {
       try {
-        const data = await getProducts({ page });
+        const data = await getProducts(params);
         if (!cancelled) {
-          setProducts(data.products);
-          setPagination(data.pagination);
+          setResult({
+            key: queryString,
+            products: data.products,
+            pagination: data.pagination,
+            error: "",
+          });
         }
       } catch (err) {
-        if (!cancelled) setError(err.message);
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setResult({
+            key: queryString,
+            products: [],
+            pagination: null,
+            error: err.message,
+          });
+        }
       }
     }
 
@@ -32,14 +68,62 @@ function Products() {
     return () => {
       cancelled = true;
     };
-  }, [page]);
+  }, [queryString]);
 
-  if (loading) {
-    return (
-      <div>
-        <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">
-          Products
-        </h1>
+  function updateFilters(changes) {
+    const next = new URLSearchParams(searchParams);
+    let changed = false;
+
+    for (const [key, value] of Object.entries(changes)) {
+      const normalized =
+        key === "sort" && value === DEFAULT_SORT ? "" : String(value);
+
+      if ((next.get(key) ?? "") === normalized) continue;
+
+      changed = true;
+      if (normalized === "") {
+        next.delete(key);
+      } else {
+        next.set(key, normalized);
+      }
+    }
+
+    if (!changed) return;
+
+    next.delete("page");
+    setSearchParams(next, { replace: true });
+  }
+
+  function clearFilters() {
+    setSearchParams(new URLSearchParams(), { replace: true });
+  }
+
+  function changePage(page) {
+    const next = new URLSearchParams(searchParams);
+
+    if (page === 1) {
+      next.delete("page");
+    } else {
+      next.set("page", String(page));
+    }
+
+    setSearchParams(next);
+  }
+
+  return (
+    <div>
+      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">
+        Products
+      </h1>
+
+      <ProductFilters
+        values={values}
+        onChange={updateFilters}
+        onClear={clearFilters}
+        hasFilters={hasFilters}
+      />
+
+      {loading ? (
         <div className="grid animate-pulse grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }, (_, index) => (
             <div
@@ -55,46 +139,36 @@ function Products() {
             </div>
           ))}
         </div>
-      </div>
-    );
-  }
+      ) : result.error ? (
+        <p
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        >
+          {result.error}
+        </p>
+      ) : result.products.length === 0 ? (
+        <p className="py-16 text-center text-slate-500">
+          {hasFilters
+            ? "No products match your filters."
+            : "No products found."}
+        </p>
+      ) : (
+        <>
+          <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {result.products.map((product) => (
+              <li key={product._id}>
+                <ProductCard product={product} />
+              </li>
+            ))}
+          </ul>
 
-  if (error) {
-    return (
-      <p
-        role="alert"
-        className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
-      >
-        {error}
-      </p>
-    );
-  }
-
-  if (products.length === 0) {
-    return (
-      <p className="py-16 text-center text-slate-500">No products found.</p>
-    );
-  }
-
-  return (
-    <div>
-      <h1 className="mb-6 text-2xl font-bold tracking-tight text-slate-900">
-        Products
-      </h1>
-
-      <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {products.map((product) => (
-          <li key={product._id}>
-            <ProductCard product={product} />
-          </li>
-        ))}
-      </ul>
-
-      <Pagination
-        page={pagination.page}
-        totalPages={pagination.totalPages}
-        onPageChange={setPage}
-      />
+          <Pagination
+            page={result.pagination.page}
+            totalPages={result.pagination.totalPages}
+            onPageChange={changePage}
+          />
+        </>
+      )}
     </div>
   );
 }
