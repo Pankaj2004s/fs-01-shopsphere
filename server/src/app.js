@@ -10,6 +10,7 @@ import categoryRoutes from "./features/categories/category.routes.js";
 import productRoutes from "./features/products/product.routes.js";
 import cartRoutes from "./features/cart/cart.routes.js";
 import orderRoutes from "./features/orders/order.routes.js";
+import paymentRoutes from "./features/payments/payment.routes.js";
 import userRoutes from "./features/users/user.routes.js";
 import uploadRoutes from "./features/uploads/upload.routes.js";
 import { notFound } from "./middlewares/notFound.js";
@@ -22,6 +23,9 @@ app.use(cors({ origin: env.clientUrl }));
 if (env.nodeEnv !== "test") {
   app.use(morgan("dev"));
 }
+
+app.use("/api/payments", paymentRoutes);
+
 app.use(express.json());
 
 app.use(
