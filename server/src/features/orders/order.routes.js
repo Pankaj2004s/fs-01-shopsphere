@@ -14,6 +14,8 @@ import {
   vendorStats,
   updateStatus,
 } from "./order.controller.js";
+import { confirmPaymentSchema } from "../payments/payment.schemas.js";
+import { create, confirm } from "../payments/payment.controller.js";
 
 const router = Router();
 
@@ -34,6 +36,13 @@ router.patch(
   validate(orderIdParamSchema, "params"),
   validate(updateOrderStatusSchema),
   updateStatus,
+);
+router.post("/:id/pay", validate(orderIdParamSchema, "params"), create);
+router.post(
+  "/:id/pay/confirm",
+  validate(orderIdParamSchema, "params"),
+  validate(confirmPaymentSchema),
+  confirm,
 );
 
 export default router;
