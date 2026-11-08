@@ -115,10 +115,7 @@ const queryProductsFromMongo = async ({
   };
 };
 
-const queryProductsFromSearch = async (query) => {
-  const { page, limit } = query;
-  const { ids, total } = await searchProductIds(query);
-
+const loadSearchPage = async ({ ids, total }, { page, limit }) => {
   const products = await Product.find({ _id: { $in: ids } }).populate(
     productPopulate,
   );
@@ -142,13 +139,19 @@ const queryProducts = async (query, { vendorId } = {}) => {
     query.search && !vendorId && env.searchEngine === "elasticsearch";
 
   if (useSearchEngine) {
+    let found;
+
     try {
-      return await queryProductsFromSearch(query);
+      found = await searchProductIds(query);
     } catch (err) {
       console.error(
         "Elasticsearch search failed, using MongoDB:",
         err.message,
       );
+    }
+
+    if (found) {
+      return loadSearchPage(found, query);
     }
   }
 
