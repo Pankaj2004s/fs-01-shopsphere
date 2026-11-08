@@ -21,4 +21,7 @@ export const env = {
   redisUrl: process.env.REDIS_URL || "redis://127.0.0.1:6379",
   elasticsearchUrl: process.env.ELASTICSEARCH_URL || "http://127.0.0.1:9200",
   searchEngine: process.env.SEARCH_ENGINE || "elasticsearch",
+  razorpayKeyId: process.env.RAZORPAY_KEY_ID || "",
+  razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || "",
+  razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || "",
 };
