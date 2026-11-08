@@ -1,5 +1,6 @@
 import { es } from "../../config/elasticsearch.js";
 import { env } from "../../config/env.js";
+import Product from "../products/product.model.js";
 import { PRODUCT_INDEX } from "./product.index.js";
 
 const REFRESH = env.nodeEnv === "test";
@@ -42,5 +43,15 @@ export async function removeProductFromIndex(productId) {
   } catch (err) {
     console.error("Search delete failed:", err.message);
     return false;
+  }
+}
+
+export async function syncProductsByIds(ids) {
+  try {
+    const uniqueIds = [...new Set(ids.map(String))];
+    const products = await Product.find({ _id: { $in: uniqueIds } });
+    await Promise.all(products.map((product) => indexProduct(product)));
+  } catch (err) {
+    console.error("Search sync failed:", err.message);
   }
 }
