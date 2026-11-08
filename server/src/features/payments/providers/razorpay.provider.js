@@ -12,6 +12,23 @@ const assertConfigured = () => {
   }
 };
 
+const assertWebhookConfigured = () => {
+  if (!env.razorpayWebhookSecret) {
+    throw new ApiError(503, "Payment webhook is not configured");
+  }
+};
+
+const hmacHex = (secret, data) =>
+  crypto.createHmac("sha256", secret).update(data).digest("hex");
+
+const safeEqual = (expectedHex, received) => {
+  const expected = Buffer.from(expectedHex);
+  const actual = Buffer.from(String(received));
+  return (
+    expected.length === actual.length && crypto.timingSafeEqual(expected, actual)
+  );
+};
+
 export const createOrder = async ({ amount, currency, receipt }) => {
   assertConfigured();
 
@@ -39,17 +56,13 @@ export const createOrder = async ({ amount, currency, receipt }) => {
 
 export const verifyPaymentSignature = ({ orderId, paymentId, signature }) => {
   assertConfigured();
-
-  const expected = Buffer.from(
-    crypto
-      .createHmac("sha256", env.razorpayKeySecret)
-      .update(`${orderId}|${paymentId}`)
-      .digest("hex"),
+  return safeEqual(
+    hmacHex(env.razorpayKeySecret, `${orderId}|${paymentId}`),
+    signature,
   );
-  const received = Buffer.from(String(signature));
+};
 
-  return (
-    expected.length === received.length &&
-    crypto.timingSafeEqual(expected, received)
-  );
+export const verifyWebhookSignature = (rawBody, signature) => {
+  assertWebhookConfigured();
+  return safeEqual(hmacHex(env.razorpayWebhookSecret, rawBody), signature);
 };
