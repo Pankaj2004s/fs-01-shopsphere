@@ -8,6 +8,8 @@ export const ORDER_STATUSES = [
   "cancelled",
 ];
 
+export const PAYMENT_STATUSES = ["unpaid", "paid", "failed"];
+
 const orderItemSchema = new mongoose.Schema(
   {
     product: {
@@ -67,12 +69,24 @@ const orderSchema = new mongoose.Schema(
       enum: ORDER_STATUSES,
       default: "pending",
     },
+    paymentStatus: {
+      type: String,
+      enum: PAYMENT_STATUSES,
+      default: "unpaid",
+    },
+    payment: {
+      provider: { type: String, trim: true },
+      providerOrderId: { type: String, trim: true },
+      providerPaymentId: { type: String, trim: true },
+      paidAt: { type: Date },
+    },
   },
   { timestamps: true },
 );
 
 orderSchema.index({ user: 1, createdAt: -1 });
 orderSchema.index({ "items.vendor": 1, createdAt: -1 });
+orderSchema.index({ "payment.providerOrderId": 1 }, { sparse: true });
 
 const Order = mongoose.model("Order", orderSchema);
 
