@@ -5,6 +5,7 @@ import {
   createOrder,
   providerName,
   verifyPaymentSignature,
+  verifyWebhookSignature,
 } from "./providers/razorpay.provider.js";
 
 const toPaise = (rupees) => Math.round(rupees * 100);
@@ -80,4 +81,54 @@ export const confirmPayment = async (
   );
 
   return updated ?? (await Order.findById(order._id));
+};
+
+export const processWebhook = async (rawBody, signature) => {
+  if (
+    !Buffer.isBuffer(rawBody) ||
+    !verifyWebhookSignature(rawBody, signature)
+  ) {
+    throw new ApiError(400, "Invalid webhook signature");
+  }
+
+  let event;
+  try {
+    event = JSON.parse(rawBody.toString("utf8"));
+  } catch {
+    throw new ApiError(400, "Invalid webhook body");
+  }
+
+  const payment = event?.payload?.payment?.entity;
+  if (!payment?.order_id) {
+    return;
+  }
+
+  if (event.event === "payment.captured") {
+    await Order.updateOne(
+      {
+        "payment.providerOrderId": payment.order_id,
+        paymentStatus: { $ne: "paid" },
+      },
+      {
+        $set: {
+          paymentStatus: "paid",
+          "payment.providerPaymentId": payment.id,
+          "payment.paidAt": new Date(),
+        },
+      },
+    );
+  } else if (event.event === "payment.failed") {
+    await Order.updateOne(
+      {
+        "payment.providerOrderId": payment.order_id,
+        paymentStatus: "unpaid",
+      },
+      {
+        $set: {
+          paymentStatus: "failed",
+          "payment.providerPaymentId": payment.id,
+        },
+      },
+    );
+  }
 };
