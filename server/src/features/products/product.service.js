@@ -1,11 +1,13 @@
 import ApiError from "../../utils/ApiError.js";
 import Category from "../categories/category.model.js";
 import Product from "./product.model.js";
+import { env } from "../../config/env.js";
 import { getOrSet, invalidate } from "../../utils/cache.js";
 import {
   indexProduct,
   removeProductFromIndex,
 } from "../search/product.sync.js";
+import { searchProductIds } from "../search/product.search.js";
 
 const PRODUCTS_NAMESPACE = "products";
 const PRODUCTS_TTL_SECONDS = 60;
@@ -62,7 +64,7 @@ export const getProductById = async (id) => {
   return product;
 };
 
-const queryProducts = async ({
+const queryProductsFromMongo = async ({
   page,
   limit,
   search,
@@ -111,6 +113,46 @@ const queryProducts = async ({
       totalPages: Math.ceil(total / limit),
     },
   };
+};
+
+const queryProductsFromSearch = async (query) => {
+  const { page, limit } = query;
+  const { ids, total } = await searchProductIds(query);
+
+  const products = await Product.find({ _id: { $in: ids } }).populate(
+    productPopulate,
+  );
+  const byId = new Map(
+    products.map((product) => [String(product._id), product]),
+  );
+
+  return {
+    products: ids.map((id) => byId.get(id)).filter(Boolean),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
+const queryProducts = async (query, { vendorId } = {}) => {
+  const useSearchEngine =
+    query.search && !vendorId && env.searchEngine === "elasticsearch";
+
+  if (useSearchEngine) {
+    try {
+      return await queryProductsFromSearch(query);
+    } catch (err) {
+      console.error(
+        "Elasticsearch search failed, using MongoDB:",
+        err.message,
+      );
+    }
+  }
+
+  return queryProductsFromMongo(query, { vendorId });
 };
 
 export const listProducts = async (query, { vendorId } = {}) => {
