@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { confirmPayment, startPayment } from "../api/payments";
 import { cancelOrder, getOrders } from "../api/orders";
 import Pagination from "../components/Pagination";
 import { useAuth } from "../hooks/useAuth";
 import { formatPrice } from "../utils/formatPrice";
+import { loadRazorpay } from "../utils/loadRazorpay";
 
 const dateFormatter = new Intl.DateTimeFormat("en-IN", {
   dateStyle: "medium",
@@ -20,6 +22,12 @@ const STATUS_STYLES = {
   cancelled: "bg-red-50 text-red-700",
 };
 
+const PAYMENT_STYLES = {
+  unpaid: "bg-slate-100 text-slate-700",
+  paid: "bg-emerald-50 text-emerald-700",
+  failed: "bg-red-50 text-red-700",
+};
+
 const DEFAULT_STATUS_STYLE = "bg-slate-100 text-slate-700";
 
 function Orders() {
@@ -31,6 +39,7 @@ function Orders() {
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
   const [cancellingId, setCancellingId] = useState(null);
+  const [payingId, setPayingId] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +77,65 @@ function Orders() {
       setActionError(err.message);
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  async function handlePay(order) {
+    setActionError("");
+    setPayingId(order._id);
+
+    try {
+      const loaded = await loadRazorpay();
+      if (!loaded) {
+        throw new Error("Could not load the payment window. Check your internet.");
+      }
+
+      const { payment } = await startPayment(order._id, token);
+
+      const checkout = new window.Razorpay({
+        key: payment.keyId,
+        amount: payment.amount,
+        currency: payment.currency,
+        order_id: payment.providerOrderId,
+        name: "ShopSphere",
+        description: `Order #${order._id.slice(-8)}`,
+        handler: async (response) => {
+          try {
+            const data = await confirmPayment(
+              order._id,
+              {
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              },
+              token,
+            );
+            setOrders((current) =>
+              current.map((item) => (item._id === order._id ? data.order : item)),
+            );
+          } catch (err) {
+            setActionError(
+              `Payment was made but could not be confirmed yet: ${err.message}`,
+            );
+          } finally {
+            setPayingId(null);
+          }
+        },
+        modal: {
+          ondismiss: () => setPayingId(null),
+        },
+      });
+
+      checkout.on("payment.failed", (response) => {
+        setActionError(
+          response.error?.description || "Payment failed. Please try again.",
+        );
+      });
+
+      checkout.open();
+    } catch (err) {
+      setActionError(err.message);
+      setPayingId(null);
     }
   }
 
@@ -146,13 +214,22 @@ function Orders() {
                   Placed on {dateFormatter.format(new Date(order.createdAt))}
                 </p>
               </div>
-              <span
-                className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
-                  STATUS_STYLES[order.status] ?? DEFAULT_STATUS_STYLE
-                }`}
-              >
-                {order.status}
-              </span>
+              <div className="flex items-center gap-2">
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+                    STATUS_STYLES[order.status] ?? DEFAULT_STATUS_STYLE
+                  }`}
+                >
+                  {order.status}
+                </span>
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+                    PAYMENT_STYLES[order.paymentStatus] ?? DEFAULT_STATUS_STYLE
+                  }`}
+                >
+                  {order.paymentStatus}
+                </span>
+              </div>
             </div>
 
             <ul className="divide-y divide-slate-100 px-5">
@@ -181,16 +258,28 @@ function Orders() {
                   {formatPrice(order.totalAmount)}
                 </span>
               </p>
-              {CANCELLABLE.includes(order.status) && (
-                <button
-                  type="button"
-                  onClick={() => handleCancel(order._id)}
-                  disabled={cancellingId === order._id}
-                  className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {cancellingId === order._id ? "Cancelling..." : "Cancel order"}
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {order.status !== "cancelled" && order.paymentStatus !== "paid" && (
+                  <button
+                    type="button"
+                    onClick={() => handlePay(order)}
+                    disabled={payingId === order._id}
+                    className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {payingId === order._id ? "Processing..." : "Pay now"}
+                  </button>
+                )}
+                {CANCELLABLE.includes(order.status) && (
+                  <button
+                    type="button"
+                    onClick={() => handleCancel(order._id)}
+                    disabled={cancellingId === order._id}
+                    className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {cancellingId === order._id ? "Cancelling..." : "Cancel order"}
+                  </button>
+                )}
+              </div>
             </div>
           </li>
         ))}
