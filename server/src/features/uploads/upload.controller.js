@@ -1,6 +1,6 @@
 import asyncHandler from "../../utils/asyncHandler.js";
 import ApiError from "../../utils/ApiError.js";
-import { saveImage } from "../../storage/local.storage.js";
+import { saveImage } from "../../storage/index.js";
 
 export const uploadImage = asyncHandler(async (req, res) => {
   if (!req.file) {
