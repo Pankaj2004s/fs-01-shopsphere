@@ -18,6 +18,10 @@ import errorHandler from "./middlewares/errorHandler.js";
 
 const app = express();
 
+if (env.nodeEnv === "production") {
+  app.set("trust proxy", 1);
+}
+
 app.use(helmet());
 app.use(cors({ origin: env.clientUrl }));
 if (env.nodeEnv !== "test") {
