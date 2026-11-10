@@ -1,8 +1,8 @@
 # ShopSphere
 
-A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, Node.js), with Redis for caching and rate limiting, Elasticsearch for product search and Razorpay (test mode) for payments.
+A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, Node.js), with Redis for caching and rate limiting, Elasticsearch for product search, Razorpay (test mode) for payments and a pluggable image storage (local disk, Cloudinary or AWS S3).
 
-> Status: in development. Steps 1 to 10 are complete: setup, authentication and roles, products and categories, cart and orders, automated tests, React client, Tailwind styling, vendor features with image upload, Redis plus Elasticsearch, and Razorpay payments with a webhook.
+> Status: in development. Steps 1 to 11 are complete: setup, authentication and roles, products and categories, cart and orders, automated tests, React client, Tailwind styling, vendor features with image upload, Redis plus Elasticsearch, Razorpay payments with a webhook, and image storage adapters.
 
 ## Tech Stack
 
@@ -12,7 +12,7 @@ A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, N
 - **Cache and rate limiting:** Redis (node-redis, express-rate-limit with a Redis store)
 - **Search:** Elasticsearch 9 (official Node client)
 - **Payments:** Razorpay in test mode (REST API with Node's built-in `fetch`, Razorpay Checkout in the browser)
-- **File upload:** multer (memory storage) with a pluggable storage adapter (local disk for now)
+- **File upload:** multer (memory storage) with a pluggable storage adapter: local disk, Cloudinary (REST API with `fetch`) or AWS S3 (official AWS SDK v3 client)
 - **Auth and validation:** JWT, bcryptjs, zod
 - **Security and logging:** helmet, cors, morgan
 - **Infrastructure:** Docker Compose for Redis and Elasticsearch
@@ -40,8 +40,8 @@ A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, N
 ### Vendor features
 
 - Become a seller: a customer upgrades to vendor with one request (atomic update, so it only works from the customer role)
-- Image upload: multipart upload with type whitelist (JPEG, PNG, WebP), 5 MB limit, UUID file names and no user-supplied names; images are served from `/uploads`
-- Storage adapter: the upload controller only knows `saveImage`, so local disk can be replaced by cloud storage without touching the controller
+- Image upload: multipart upload with type whitelist (JPEG, PNG, WebP), 5 MB limit, UUID file names and no user-supplied names
+- Pluggable image storage: the upload controller only knows `saveImage`, and the `STORAGE_DRIVER` setting chooses where the image goes (local disk, Cloudinary or AWS S3) without touching the controller
 - Vendor product list (`GET /api/products/mine`): the vendor id always comes from the token, never from the query
 - Vendor orders: a vendor sees only the orders that contain their products, and only their own items and subtotal (customer name only)
 - Vendor dashboard statistics computed with a MongoDB aggregation: orders, revenue (confirmed, shipped and delivered only), units sold, orders per status, product count and low-stock products
@@ -62,7 +62,7 @@ A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, N
 - Confirmation is idempotent: confirming twice, or a webhook after a confirm, never changes a paid order again
 - Webhook as a backup: Razorpay calls the server directly, so an order is still marked paid if the customer closes the browser after paying
 - Missing Razorpay keys do not stop the server: only the payment endpoints answer 503
-- Automated test suite: 300 tests, including concurrency tests for stock reservation and double cancel, and payment and webhook tests with the Razorpay network call replaced by a stub
+- Automated test suite: 315 tests, including concurrency tests for stock reservation and double cancel, payment and webhook tests with the Razorpay network call replaced by a stub, and storage adapter tests with mocks
 
 ## Client (React)
 
@@ -132,7 +132,7 @@ fs-01-shopsphere/
         │   └── users/      # user model, become-vendor service, controller, routes
         ├── middlewares/    # auth (protect, authorize), validate, upload (multer), rateLimit, notFound, errorHandler
         ├── scripts/        # seed and reindex scripts
-        ├── storage/        # local disk image storage adapter
+        ├── storage/        # image storage: index.js (driver selector), local, cloudinary and s3 adapters, imageTypes.js
         ├── utils/          # ApiError, asyncHandler, token (jwt helpers), cache (Redis cache helper)
         ├── app.js          # express app and middleware setup
         └── server.js       # connects to the services and starts the server
@@ -146,6 +146,7 @@ fs-01-shopsphere/
 - MongoDB running locally (or a MongoDB Atlas connection string)
 - Docker Desktop, for Redis and Elasticsearch
 - (Optional) a Razorpay account in test mode, for payments
+- (Optional) a Cloudinary or AWS S3 account, only if you want cloud image storage (the default is the local disk)
 
 ### Setup
 
@@ -189,7 +190,7 @@ cd client && npm run dev
 
 Restart the Vite dev server after you change `client/.env`, because Vite reads it only at startup.
 
-The server also starts without Docker: with Redis down there is no cache and rate limit counters are skipped, and with Elasticsearch down search uses MongoDB. Run `npm run reindex` whenever products were changed outside the API (for example after `npm run seed`). The server also starts without Razorpay keys, and then only the payment endpoints answer 503.
+The server also starts without Docker: with Redis down there is no cache and rate limit counters are skipped, and with Elasticsearch down search uses MongoDB. Run `npm run reindex` whenever products were changed outside the API (for example after `npm run seed`). The server also starts without Razorpay keys, and then only the payment endpoints answer 503. Images are stored on the local disk unless `STORAGE_DRIVER` says otherwise.
 
 ## Testing
 
@@ -205,8 +206,9 @@ npm run test:coverage   # run all tests and print a coverage report
 - Tests use a separate MongoDB database, `shopsphere_test`, a separate Redis database (number 1) and a separate Elasticsearch index (`shopsphere-products-test`). The values are set in `server/vitest.config.js`, so development data is never touched. The test helper refuses to run if the database name does not end with `_test`, and the cache tests refuse to run if the Redis URL is not database 1.
 - Tests run with `SEARCH_ENGINE=mongodb`, so most product tests do not need the search index. Only `products.search.test.js` switches to Elasticsearch.
 - Payment tests never call Razorpay: they replace the global `fetch` with a stub and set test keys on the `env` object, so no internet and no real keys are needed. Webhook tests build an event body and sign it with a test webhook secret, like Razorpay does.
+- Storage tests never call Cloudinary or AWS: the Cloudinary adapter runs against a stubbed `fetch`, and the whole `@aws-sdk/client-s3` module is replaced with a fake client that records the command. The `env` object is restored after every test, and the local adapter test writes into a temporary folder.
 - Collections are cleared after every test, and test files run one after another because they share one database.
-- The full run takes about 4 minutes, mostly because bcrypt (12 rounds) is slow on purpose.
+- The full run takes about 5 minutes, mostly because bcrypt (12 rounds) is slow on purpose.
 - Elasticsearch needs about a minute after `docker compose up -d`. Tests started earlier fail with connection errors.
 
 What is covered:
@@ -221,8 +223,9 @@ What is covered:
 - Search: stemming, typo tolerance, filters, sorting, pagination, sync on create, update, delete and orders, and fallback to MongoDB when Elasticsearch fails
 - Payments: amount in paise, secret never in a response, 404 for another user's order, 409 for cancelled or paid orders, 502 when Razorpay rejects, 503 without keys, valid and invalid signatures, a payment of a different provider order, idempotent confirm
 - Webhook: missing, wrong and valid signatures, invalid JSON, `payment.captured` and `payment.failed`, the same event twice, a paid order never becoming failed, failed then captured, unknown order and unknown event answered with 200
+- Storage: Cloudinary signed form (signature recomputed in the test), the API secret never in the request, 502 when rejected or unreachable, 503 when not configured, 400 for a wrong file type; S3 bucket, key format, content type and body, public URL, 502, 503 and 400; the selector picks the adapter from `STORAGE_DRIVER` and answers 500 for an unknown driver
 
-Latest result: 24 test files, 300 tests, all passing.
+Latest result: 25 test files, 315 tests, all passing.
 
 The coverage table below was measured after Step 5 (206 tests) and has not been measured again.
 
@@ -247,14 +250,22 @@ The coverage table below was measured after Step 5 (206 tests) and has not been 
 | `NODE_ENV`                | `development` or `production`                                             |
 | `JWT_SECRET`              | Secret used to sign tokens (required)                                     |
 | `JWT_EXPIRES_IN`          | Token lifetime, for example `7d` (default 7d)                             |
-| `SERVER_URL`              | Public URL of the server, used in image URLs (default `http://localhost:PORT`) |
-| `UPLOAD_DIR`              | Folder for uploaded images (default `uploads`)                            |
+| `SERVER_URL`              | Public URL of the server, used in local image URLs (default `http://localhost:PORT`) |
+| `UPLOAD_DIR`              | Folder for uploaded images with the local driver (default `uploads`)      |
 | `REDIS_URL`               | Redis connection string (default `redis://127.0.0.1:6379`)                |
 | `ELASTICSEARCH_URL`       | Elasticsearch address (default `http://127.0.0.1:9200`)                   |
 | `SEARCH_ENGINE`           | `elasticsearch` (default) or `mongodb` to search with MongoDB text search |
 | `RAZORPAY_KEY_ID`         | Razorpay key id, `rzp_test_...` in test mode (payments are off when empty) |
 | `RAZORPAY_KEY_SECRET`     | Razorpay key secret, used to create orders and verify payments. Never commit it |
 | `RAZORPAY_WEBHOOK_SECRET` | Secret chosen by you and set in the Razorpay dashboard for the webhook, used to verify webhook calls |
+| `STORAGE_DRIVER`          | Where images are stored: `local` (default), `cloudinary` or `s3`          |
+| `CLOUDINARY_CLOUD_NAME`   | Cloudinary cloud name (needed when the driver is `cloudinary`)            |
+| `CLOUDINARY_API_KEY`      | Cloudinary API key                                                        |
+| `CLOUDINARY_API_SECRET`   | Cloudinary API secret, used only to sign uploads. Never commit it         |
+| `S3_BUCKET`               | S3 bucket name (needed when the driver is `s3`)                           |
+| `S3_REGION`               | Region of the bucket, for example `ap-south-1`                            |
+| `S3_PUBLIC_URL`           | Optional base URL for image links, for example a CloudFront domain        |
+| `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` | Standard AWS credentials, read by the AWS SDK itself (not by `env.js`). Never commit them |
 
 Generate a secret with:
 
@@ -287,8 +298,8 @@ Only variables that start with `VITE_` are visible to browser code. Never put a 
 | POST   | `/api/products`                | Vendor or admin                 | Create a product (vendor is taken from the token)                 |
 | PATCH  | `/api/products/:id`            | Owner or admin                  | Update fields of a product                                        |
 | DELETE | `/api/products/:id`            | Owner or admin                  | Delete a product                                                  |
-| POST   | `/api/uploads/images`          | Vendor or admin                 | Upload one image (field `image`), returns `{ url }` (rate limited) |
-| GET    | `/uploads/:file`               | Public                          | Serve an uploaded image                                           |
+| POST   | `/api/uploads/images`          | Vendor or admin                 | Upload one image (field `image`) to the configured storage, returns `{ url }` (rate limited) |
+| GET    | `/uploads/:file`               | Public                          | Serve an uploaded image (local driver only)                       |
 | GET    | `/api/cart`                    | Logged-in user                  | View my cart with live prices and total                           |
 | POST   | `/api/cart/items`              | Logged-in user                  | Add a product (quantity defaults to 1, checked against stock)     |
 | PATCH  | `/api/cart/items/:productId`   | Logged-in user                  | Set the quantity of an item                                       |
@@ -408,6 +419,29 @@ Razorpay can call the server directly, so a payment is still recorded when the b
 | Cancelled or already paid order         | 409    |
 | Order of another user                   | 404    |
 
+## Image storage
+
+Every adapter has the same interface, `saveImage({ buffer, mimetype })` returning `{ url }`. The upload controller imports only `saveImage` from `src/storage/index.js`, which reads `STORAGE_DRIVER` on every call and hands the file to the chosen adapter (strategy pattern). An unknown driver name answers 500 with a clear message.
+
+| Driver       | Where the image goes                                  | How it talks to the service                    | Use                          |
+| ------------ | ----------------------------------------------------- | ---------------------------------------------- | ---------------------------- |
+| `local`      | Folder `UPLOAD_DIR`, served by the server at `/uploads` | Node `fs`                                      | Development and tests (default) |
+| `cloudinary` | Folder `shopsphere` in a Cloudinary account           | Signed upload with `fetch` and `FormData`      | Hosts with a temporary disk  |
+| `s3`         | Key `shopsphere/<uuid>.<ext>` in an S3 bucket         | AWS SDK v3 `PutObjectCommand`                  | AWS                          |
+
+- The accepted image types and their file extensions live in one file, `src/storage/imageTypes.js`, which is used by the upload middleware and by every adapter. The lookup uses `Object.hasOwn`, so a made-up type such as `constructor` is rejected.
+- Cloudinary: the server signs `folder` and `timestamp` with SHA-1 plus the API secret, so only the signature is sent and the secret never leaves the server. The timestamp makes an old signature useless.
+- S3: the SDK signs the request. Credentials are not in `env.js` or in the code: the SDK reads `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` from the environment. The client is created on first use and then reused. Objects get `Cache-Control: public, max-age=31536000, immutable`, because the name is a UUID and the file never changes. If `S3_PUBLIC_URL` is set (for example a CloudFront domain) the image link uses it, otherwise the standard S3 URL is used. The bucket must allow public reads, or be behind a CDN, for the browser to show the images.
+- File names are always a new UUID, never a name sent by the user.
+- Missing settings do not stop the server: only an upload with that driver answers 503.
+
+| Case                                          | Status |
+| --------------------------------------------- | ------ |
+| Driver settings missing                       | 503    |
+| Cloudinary or S3 unreachable or refuses       | 502    |
+| File type not allowed                         | 400    |
+| Unknown `STORAGE_DRIVER`                      | 500    |
+
 ## Design Notes and Limitations
 
 - Prices are stored as a Number in rupees and converted to paise (rounded) when talking to Razorpay. A production system would store integer paise.
@@ -419,12 +453,13 @@ Razorpay can call the server directly, so a payment is still recorded when the b
 - A cached product list can be up to 60 seconds old if Redis was down when a product changed.
 - Search results are ordered by the chosen sort, not by relevance.
 - When Elasticsearch fails, the MongoDB fallback does not accept typos, so its results can differ.
-- Uploaded images are stored on the local disk. Hosts with a temporary disk need a cloud storage adapter before deployment. Files are not deleted when an image is removed from a product or the product is deleted, and the file type is taken from the request header (a production system should check the file contents).
+- Uploaded images go to the adapter chosen by `STORAGE_DRIVER`. The local disk is temporary on hosts such as Render, so a deployed server must use Cloudinary or S3. Files are not deleted when an image is removed from a product or the product is deleted, and the file type is taken from the request header (a production system should check the file contents). The 5 MB limit is written in two places.
+- The Cloudinary adapter is tested with a stubbed `fetch` and the S3 adapter with a mocked AWS SDK. The S3 adapter has not been run against a live AWS account, because no AWS account was available.
 - Becoming a vendor is instant, there is no approval step. An admin who opens a vendor page is sent to the become-seller page.
 - Behind a proxy (for example a hosting platform) the server needs `trust proxy` set, otherwise all users share one rate limit counter.
 - On startup the rate limit library logs a store initialization error when Redis is not connected yet. The limiter still works once Redis is ready.
 - `npm audit` reports a moderate issue in `minimatch` through `nodemon`, which is a development tool only.
-- Tests need local MongoDB, Redis and Elasticsearch and take about 4 minutes. There are no frontend tests, so the search and filter page and the Pay now flow were checked only with lint and build, not in a browser.
+- Tests need local MongoDB, Redis and Elasticsearch and take about 5 minutes. There are no frontend tests, so the search and filter page and the Pay now flow were checked only with lint and build, not in a browser.
 - The client keeps the JWT in `localStorage`, which JavaScript can read, so an XSS bug could steal it. An `httpOnly` cookie would be safer in production.
 - Payments run in Razorpay test mode only. Creating a real Razorpay order was checked once against the test API with a script. The Razorpay popup itself and the webhook call from the Razorpay dashboard have not been run end to end yet, because the webhook needs a public URL.
 - There is no vendor payout or split: the money would go to one Razorpay account. Razorpay Route or Stripe Connect need business verification. Every order item stores its vendor and price, so a split could be calculated later.
@@ -448,3 +483,4 @@ This project follows Conventional Commits: `feat`, `fix`, `chore`, `docs`, `styl
 - [x] Step 8: Vendor dashboard, product management and image upload
 - [x] Step 9: Redis rate limiting and caching, Elasticsearch search and filters
 - [x] Step 10: Razorpay payments (test mode), signature verification, webhook, Pay now button
+- [x] Step 11: Image storage adapters (local, Cloudinary, AWS S3) with a driver selector
