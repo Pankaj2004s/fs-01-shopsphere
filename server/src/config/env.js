@@ -3,6 +3,10 @@ dotenv.config({ quiet: true });
 
 const required = ["MONGO_URI", "JWT_SECRET"];
 
+if (process.env.NODE_ENV === "production") {
+  required.push("CLIENT_URL");
+}
+
 for (const key of required) {
   if (!process.env[key]) {
     throw new Error(`Missing required environment variable: ${key}`);
