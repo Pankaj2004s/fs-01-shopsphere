@@ -1,8 +1,8 @@
 # ShopSphere
 
-A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, Node.js), with Redis for caching and rate limiting, Elasticsearch for product search, Razorpay (test mode) for payments and a pluggable image storage (local disk, Cloudinary or AWS S3).
+A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, Node.js), with Redis for caching and rate limiting, Elasticsearch for product search, Razorpay (test mode) for payments and a pluggable image storage (local disk, Cloudinary or AWS S3). The app is deployed on Vercel and Render.
 
-> Status: in development. Steps 1 to 11 are complete: setup, authentication and roles, products and categories, cart and orders, automated tests, React client, Tailwind styling, vendor features with image upload, Redis plus Elasticsearch, Razorpay payments with a webhook, and image storage adapters.
+> Status: deployed. Steps 1 to 12 are complete: setup, authentication and roles, products and categories, cart and orders, automated tests, React client, Tailwind styling, vendor features with image upload, Redis plus Elasticsearch, Razorpay payments with a webhook, image storage adapters, and deployment (Vercel, Render, MongoDB Atlas, Elastic Cloud, Cloudinary).
 
 ## Tech Stack
 
@@ -15,7 +15,8 @@ A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, N
 - **File upload:** multer (memory storage) with a pluggable storage adapter: local disk, Cloudinary (REST API with `fetch`) or AWS S3 (official AWS SDK v3 client)
 - **Auth and validation:** JWT, bcryptjs, zod
 - **Security and logging:** helmet, cors, morgan
-- **Infrastructure:** Docker Compose for Redis and Elasticsearch
+- **Infrastructure:** Docker Compose for Redis and Elasticsearch in development
+- **Deployment:** Vercel (client), Render (API and Redis), MongoDB Atlas, Elastic Cloud (hosted Elasticsearch), Cloudinary (images)
 - **Testing:** Vitest, Supertest, @vitest/coverage-v8
 
 ## Features So Far
@@ -104,6 +105,7 @@ The route guards only decide what the UI shows. The real protection is the `prot
 fs-01-shopsphere/
 ├── docker-compose.yml      # Redis and Elasticsearch for local development
 ├── client/                 # React app (Vite)
+│   ├── vercel.json         # rewrites every path to index.html (React Router refresh on Vercel)
 │   └── src/
 │       ├── api/            # fetch wrapper and API functions (auth, products, cart, orders, payments, users, uploads, categories)
 │       ├── components/     # Layout, ProtectedRoute, VendorRoute, ProductCard, ProductFilters, Pagination
@@ -142,7 +144,7 @@ fs-01-shopsphere/
 
 ### Prerequisites
 
-- Node.js 22 (developed and tested on 22.14)
+- Node.js 22 (developed and tested on 22.14, and pinned to 22.x in `server/package.json`)
 - MongoDB running locally (or a MongoDB Atlas connection string)
 - Docker Desktop, for Redis and Elasticsearch
 - (Optional) a Razorpay account in test mode, for payments
@@ -192,6 +194,46 @@ Restart the Vite dev server after you change `client/.env`, because Vite reads i
 
 The server also starts without Docker: with Redis down there is no cache and rate limit counters are skipped, and with Elasticsearch down search uses MongoDB. Run `npm run reindex` whenever products were changed outside the API (for example after `npm run seed`). The server also starts without Razorpay keys, and then only the payment endpoints answer 503. Images are stored on the local disk unless `STORAGE_DRIVER` says otherwise.
 
+## Deployment
+
+Live demo (free plans: the API sleeps after a while without traffic, so the first request can take up to a minute):
+
+- Client: https://fs-01-shopsphere.vercel.app
+- API health check: https://shopsphere-api-8ab5.onrender.com/api/health
+
+| Part     | Service                                  | Notes                                                                                               |
+| -------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Client   | Vercel (Vite project, root `client`)     | `client/vercel.json` sends every path to `index.html`, so a refresh on a React Router URL does not give a 404. `VITE_API_URL` points to the API |
+| API      | Render web service (root `server`)       | Node 22.x, build `npm install`, start `npm start`, health check path `/api/health`                  |
+| Database | MongoDB Atlas free cluster (Mumbai)      | Database `shopsphere`, a dedicated user that has `readWrite` on that database only                  |
+| Redis    | Render Key Value (free, Singapore)       | Reached through the internal URL, used for cache and rate limit counters                            |
+| Search   | Elastic Cloud hosted deployment (Mumbai) | Version 9, 14-day trial, login with an API key (`ELASTICSEARCH_API_KEY`)                            |
+| Images   | Cloudinary                               | `STORAGE_DRIVER=cloudinary`, because the disk of a Render service is temporary                      |
+| Payments | Razorpay test mode                       | Webhook URL `/api/payments/webhook` with the events `payment.captured` and `payment.failed`        |
+
+Deployment notes:
+
+- All secrets are set only in the Render dashboard, never committed. `.env.example` lists every variable.
+- `NODE_ENV=production` turns on `trust proxy` (one proxy hop), so the rate limiter sees the real client IP behind Render, and makes `CLIENT_URL` a required variable.
+- `CLIENT_URL` must be the exact origin of the client without a trailing slash, because CORS compares the origin as a string.
+- Load the products into the hosted search index once, with the production values set for that one command only (the `.env` file is not changed):
+
+```bash
+ELASTICSEARCH_URL=<endpoint> ELASTICSEARCH_API_KEY=<key> MONGO_URI=<atlas uri> npm run reindex
+```
+
+- The free Render Key Value instance can lose its data when it restarts. This is fine here, because Redis only holds cache entries and rate limit counters.
+- The Elastic Cloud trial lasts 14 days. After that the hosted search stops, and product search falls back to MongoDB text search, which has no typo tolerance.
+
+Checked on the deployed API with curl scripts (not in a browser):
+
+- Health check, product list and category list read from Atlas
+- CORS: the API answers with the Vercel origin, and the preflight request for `POST` returns 204
+- Register, login and becoming a vendor work, and the login rate limit headers are present
+- Webhook: a request without a signature gets 400, and a request signed with the webhook secret gets 200
+- Image upload to the live Cloudinary account returns a working `res.cloudinary.com` link
+- `npm run reindex` copied the 9 seed products into the hosted Elasticsearch index
+
 ## Testing
 
 The tests are integration tests: Supertest calls the Express app directly (no open port) and the requests go through the routes, middleware, controllers and services to real MongoDB, Redis and Elasticsearch. Start the Docker containers before running them.
@@ -209,7 +251,7 @@ npm run test:coverage   # run all tests and print a coverage report
 - Storage tests never call Cloudinary or AWS: the Cloudinary adapter runs against a stubbed `fetch`, and the whole `@aws-sdk/client-s3` module is replaced with a fake client that records the command. The `env` object is restored after every test, and the local adapter test writes into a temporary folder.
 - Collections are cleared after every test, and test files run one after another because they share one database.
 - The full run takes about 5 minutes, mostly because bcrypt (12 rounds) is slow on purpose.
-- Elasticsearch needs about a minute after `docker compose up -d`. Tests started earlier fail with connection errors.
+- Elasticsearch needs about a minute after `docker compose up -d`. Tests started earlier fail with connection errors, and so do tests started while the containers are stopped.
 
 What is covered:
 
@@ -246,7 +288,7 @@ The coverage table below was measured after Step 5 (206 tests) and has not been 
 | ------------------------- | ------------------------------------------------------------------------- |
 | `PORT`                    | Server port (default 5000)                                                |
 | `MONGO_URI`               | MongoDB connection string (required)                                      |
-| `CLIENT_URL`              | Allowed frontend origin for CORS                                          |
+| `CLIENT_URL`              | Allowed frontend origin for CORS, without a trailing slash (required when `NODE_ENV=production`) |
 | `NODE_ENV`                | `development` or `production`                                             |
 | `JWT_SECRET`              | Secret used to sign tokens (required)                                     |
 | `JWT_EXPIRES_IN`          | Token lifetime, for example `7d` (default 7d)                             |
@@ -254,6 +296,7 @@ The coverage table below was measured after Step 5 (206 tests) and has not been 
 | `UPLOAD_DIR`              | Folder for uploaded images with the local driver (default `uploads`)      |
 | `REDIS_URL`               | Redis connection string (default `redis://127.0.0.1:6379`)                |
 | `ELASTICSEARCH_URL`       | Elasticsearch address (default `http://127.0.0.1:9200`)                   |
+| `ELASTICSEARCH_API_KEY`   | API key for a hosted Elasticsearch such as Elastic Cloud (empty by default, not needed for the local Docker container) |
 | `SEARCH_ENGINE`           | `elasticsearch` (default) or `mongodb` to search with MongoDB text search |
 | `RAZORPAY_KEY_ID`         | Razorpay key id, `rzp_test_...` in test mode (payments are off when empty) |
 | `RAZORPAY_KEY_SECRET`     | Razorpay key secret, used to create orders and verify payments. Never commit it |
@@ -389,6 +432,7 @@ MongoDB stays the source of truth. Elasticsearch holds a copy with strict mappin
 - The index is created on server start if it does not exist
 - Writes go to MongoDB first, then to Elasticsearch, then the cache is cleared
 - `npm run reindex` recreates the index and copies every product from MongoDB in batches of 500
+- The client sends the API key from `ELASTICSEARCH_API_KEY` when it is set, which hosted deployments need. Locally the variable stays empty
 
 ## Payments (Razorpay test mode)
 
@@ -453,15 +497,16 @@ Every adapter has the same interface, `saveImage({ buffer, mimetype })` returnin
 - A cached product list can be up to 60 seconds old if Redis was down when a product changed.
 - Search results are ordered by the chosen sort, not by relevance.
 - When Elasticsearch fails, the MongoDB fallback does not accept typos, so its results can differ.
+- The hosted Elasticsearch is a 14-day Elastic Cloud trial. When it ends, search uses the MongoDB fallback.
 - Uploaded images go to the adapter chosen by `STORAGE_DRIVER`. The local disk is temporary on hosts such as Render, so a deployed server must use Cloudinary or S3. Files are not deleted when an image is removed from a product or the product is deleted, and the file type is taken from the request header (a production system should check the file contents). The 5 MB limit is written in two places.
-- The Cloudinary adapter is tested with a stubbed `fetch` and the S3 adapter with a mocked AWS SDK. The S3 adapter has not been run against a live AWS account, because no AWS account was available.
+- The Cloudinary adapter is tested with a stubbed `fetch` and it was also run once against a live Cloudinary account from the deployed server. The S3 adapter is tested with a mocked AWS SDK only. It has not been run against a live AWS account, because no AWS account was available.
 - Becoming a vendor is instant, there is no approval step. An admin who opens a vendor page is sent to the become-seller page.
-- Behind a proxy (for example a hosting platform) the server needs `trust proxy` set, otherwise all users share one rate limit counter.
-- On startup the rate limit library logs a store initialization error when Redis is not connected yet. The limiter still works once Redis is ready.
+- In production the server sets `trust proxy` to 1, which fits one proxy such as Render. A different hosting setup with more proxies needs another value, otherwise all users share one rate limit counter.
+- On startup the rate limit library logs a store initialization error when Redis is not connected yet. The rate limit headers are present on the deployed server, so the limiter works.
 - `npm audit` reports a moderate issue in `minimatch` through `nodemon`, which is a development tool only.
 - Tests need local MongoDB, Redis and Elasticsearch and take about 5 minutes. There are no frontend tests, so the search and filter page and the Pay now flow were checked only with lint and build, not in a browser.
 - The client keeps the JWT in `localStorage`, which JavaScript can read, so an XSS bug could steal it. An `httpOnly` cookie would be safer in production.
-- Payments run in Razorpay test mode only. Creating a real Razorpay order was checked once against the test API with a script. The Razorpay popup itself and the webhook call from the Razorpay dashboard have not been run end to end yet, because the webhook needs a public URL.
+- Payments run in Razorpay test mode only. Creating a real Razorpay order was checked once against the test API with a script. The webhook is registered in the Razorpay dashboard and a signed test event was accepted by the deployed server, but the Razorpay popup and a real webhook call from Razorpay after a payment have not been run end to end.
 - There is no vendor payout or split: the money would go to one Razorpay account. Razorpay Route or Stripe Connect need business verification. Every order item stores its vendor and price, so a split could be calculated later.
 - A paid order that is cancelled afterwards is not refunded by the code. A refund has to be made in the Razorpay dashboard.
 - A payment that arrives for an order cancelled in the meantime is still recorded as paid, with no automatic refund.
@@ -484,3 +529,4 @@ This project follows Conventional Commits: `feat`, `fix`, `chore`, `docs`, `styl
 - [x] Step 9: Redis rate limiting and caching, Elasticsearch search and filters
 - [x] Step 10: Razorpay payments (test mode), signature verification, webhook, Pay now button
 - [x] Step 11: Image storage adapters (local, Cloudinary, AWS S3) with a driver selector
+- [x] Step 12: Deployment (Vercel, Render, MongoDB Atlas, Elastic Cloud, Cloudinary), production settings
