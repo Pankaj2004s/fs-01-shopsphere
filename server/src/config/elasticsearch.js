@@ -3,6 +3,9 @@ import { env } from "./env.js";
 
 export const es = new Client({
   node: env.elasticsearchUrl,
+  ...(env.elasticsearchApiKey && {
+    auth: { apiKey: env.elasticsearchApiKey },
+  }),
   maxRetries: 1,
   requestTimeout: 3000,
 });
