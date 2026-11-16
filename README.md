@@ -2,7 +2,15 @@
 
 A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, Node.js), with Redis for caching and rate limiting, Elasticsearch for product search, Razorpay (test mode) for payments and a pluggable image storage (local disk, Cloudinary or AWS S3). The app is deployed on Vercel and Render.
 
-> Status: deployed. Steps 1 to 12 are complete: setup, authentication and roles, products and categories, cart and orders, automated tests, React client, Tailwind styling, vendor features with image upload, Redis plus Elasticsearch, Razorpay payments with a webhook, image storage adapters, and deployment (Vercel, Render, MongoDB Atlas, Elastic Cloud, Cloudinary).
+> Status: deployed and documented. Steps 1 to 13 are complete: setup, authentication and roles, products and categories, cart and orders, automated tests, React client, Tailwind styling, vendor features with image upload, Redis plus Elasticsearch, Razorpay payments with a webhook, image storage adapters, deployment (Vercel, Render, MongoDB Atlas, Elastic Cloud, Cloudinary), and documentation (architecture diagrams, API reference, test results).
+
+## Documentation
+
+| Document | What it has |
+| -------- | ----------- |
+| [Architecture](docs/architecture.md) | Mermaid diagrams: system overview, request pipeline inside the API, order and payment sequence, search and image upload, and the design decisions |
+| [API reference](docs/API.md) | Every endpoint with access rules, request, response, errors and rate limits, plus the error format and the order status rules |
+| [Test results](docs/TEST_RESULTS.md) | Result of the full test run (25 files, 315 tests), tests per file and per area, the test environment, and what is not covered |
 
 ## Tech Stack
 
@@ -104,6 +112,10 @@ The route guards only decide what the UI shows. The real protection is the `prot
 ```
 fs-01-shopsphere/
 ├── docker-compose.yml      # Redis and Elasticsearch for local development
+├── docs/                   # project documentation
+│   ├── architecture.md     # Mermaid architecture diagrams and design decisions
+│   ├── API.md              # API reference
+│   └── TEST_RESULTS.md     # result of the full test run
 ├── client/                 # React app (Vite)
 │   ├── vercel.json         # rewrites every path to index.html (React Router refresh on Vercel)
 │   └── src/
@@ -250,7 +262,7 @@ npm run test:coverage   # run all tests and print a coverage report
 - Payment tests never call Razorpay: they replace the global `fetch` with a stub and set test keys on the `env` object, so no internet and no real keys are needed. Webhook tests build an event body and sign it with a test webhook secret, like Razorpay does.
 - Storage tests never call Cloudinary or AWS: the Cloudinary adapter runs against a stubbed `fetch`, and the whole `@aws-sdk/client-s3` module is replaced with a fake client that records the command. The `env` object is restored after every test, and the local adapter test writes into a temporary folder.
 - Collections are cleared after every test, and test files run one after another because they share one database.
-- The full run takes about 5 minutes, mostly because bcrypt (12 rounds) is slow on purpose.
+- The full run takes about 4 to 5 minutes, mostly because bcrypt (12 rounds) is slow on purpose.
 - Elasticsearch needs about a minute after `docker compose up -d`. Tests started earlier fail with connection errors, and so do tests started while the containers are stopped.
 
 What is covered:
@@ -267,7 +279,7 @@ What is covered:
 - Webhook: missing, wrong and valid signatures, invalid JSON, `payment.captured` and `payment.failed`, the same event twice, a paid order never becoming failed, failed then captured, unknown order and unknown event answered with 200
 - Storage: Cloudinary signed form (signature recomputed in the test), the API secret never in the request, 502 when rejected or unreachable, 503 when not configured, 400 for a wrong file type; S3 bucket, key format, content type and body, public URL, 502, 503 and 400; the selector picks the adapter from `STORAGE_DRIVER` and answers 500 for an unknown driver
 
-Latest result: 25 test files, 315 tests, all passing.
+Latest result: 25 test files, 315 tests, all passing (215.97 s on 16 November 2026). Details, tests per file and what is not covered: [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md).
 
 The coverage table below was measured after Step 5 (206 tests) and has not been measured again.
 
@@ -325,6 +337,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 Only variables that start with `VITE_` are visible to browser code. Never put a secret in them. The Razorpay key id reaches the browser through the API response, and the key secret never leaves the server.
 
 ## API Endpoints
+
+This is a short overview. The full reference with request bodies, responses, error messages and rate limits is in [docs/API.md](docs/API.md).
 
 | Method | Endpoint                       | Access                          | Description                                                       |
 | ------ | ------------------------------ | ------------------------------- | ----------------------------------------------------------------- |
@@ -488,6 +502,8 @@ Every adapter has the same interface, `saveImage({ buffer, mimetype })` returnin
 
 ## Design Notes and Limitations
 
+The architecture diagrams and the reasons behind the main design choices are in [docs/architecture.md](docs/architecture.md).
+
 - Prices are stored as a Number in rupees and converted to paise (rounded) when talking to Razorpay. A production system would store integer paise.
 - Order status is on the whole order, not per item. If an order has items from more than one vendor, any of those vendors can change the status, and a cancel restores stock for all items. This behaviour is covered by a test.
 - MongoDB transactions need a replica set, so stock reservation uses atomic conditional updates plus a manual rollback. A server crash between the steps could leave stock reduced.
@@ -504,7 +520,7 @@ Every adapter has the same interface, `saveImage({ buffer, mimetype })` returnin
 - In production the server sets `trust proxy` to 1, which fits one proxy such as Render. A different hosting setup with more proxies needs another value, otherwise all users share one rate limit counter.
 - On startup the rate limit library logs a store initialization error when Redis is not connected yet. The rate limit headers are present on the deployed server, so the limiter works.
 - `npm audit` reports a moderate issue in `minimatch` through `nodemon`, which is a development tool only.
-- Tests need local MongoDB, Redis and Elasticsearch and take about 5 minutes. There are no frontend tests, so the search and filter page and the Pay now flow were checked only with lint and build, not in a browser.
+- Tests need local MongoDB, Redis and Elasticsearch and take about 4 to 5 minutes. There are no frontend tests, so the search and filter page and the Pay now flow were checked only with lint and build, not in a browser.
 - The client keeps the JWT in `localStorage`, which JavaScript can read, so an XSS bug could steal it. An `httpOnly` cookie would be safer in production.
 - Payments run in Razorpay test mode only. Creating a real Razorpay order was checked once against the test API with a script. The webhook is registered in the Razorpay dashboard and a signed test event was accepted by the deployed server, but the Razorpay popup and a real webhook call from Razorpay after a payment have not been run end to end.
 - There is no vendor payout or split: the money would go to one Razorpay account. Razorpay Route or Stripe Connect need business verification. Every order item stores its vendor and price, so a split could be calculated later.
@@ -530,3 +546,4 @@ This project follows Conventional Commits: `feat`, `fix`, `chore`, `docs`, `styl
 - [x] Step 10: Razorpay payments (test mode), signature verification, webhook, Pay now button
 - [x] Step 11: Image storage adapters (local, Cloudinary, AWS S3) with a driver selector
 - [x] Step 12: Deployment (Vercel, Render, MongoDB Atlas, Elastic Cloud, Cloudinary), production settings
+- [x] Step 13: Documentation (architecture diagrams, API reference, test results)
