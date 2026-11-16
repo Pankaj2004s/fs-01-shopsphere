@@ -2,7 +2,7 @@
 
 A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, Node.js), with Redis for caching and rate limiting, Elasticsearch for product search, Razorpay (test mode) for payments and a pluggable image storage (local disk, Cloudinary or AWS S3). The app is deployed on Vercel and Render.
 
-> Status: deployed and documented. Steps 1 to 13 are complete: setup, authentication and roles, products and categories, cart and orders, automated tests, React client, Tailwind styling, vendor features with image upload, Redis plus Elasticsearch, Razorpay payments with a webhook, image storage adapters, deployment (Vercel, Render, MongoDB Atlas, Elastic Cloud, Cloudinary), and documentation (architecture diagrams, API reference, test results).
+> Status: deployed, documented and ready to present. Steps 1 to 14 are complete: setup, authentication and roles, products and categories, cart and orders, automated tests, React client, Tailwind styling, vendor features with image upload, Redis plus Elasticsearch, Razorpay payments with a webhook, image storage adapters, deployment (Vercel, Render, MongoDB Atlas, Elastic Cloud, Cloudinary), documentation (architecture diagrams, API reference, test results), and the presentation outline and individual reflection.
 
 ## Documentation
 
@@ -11,6 +11,8 @@ A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, N
 | [Architecture](docs/architecture.md) | Mermaid diagrams: system overview, request pipeline inside the API, order and payment sequence, search and image upload, and the design decisions |
 | [API reference](docs/API.md) | Every endpoint with access rules, request, response, errors and rate limits, plus the error format and the order status rules |
 | [Test results](docs/TEST_RESULTS.md) | Result of the full test run (25 files, 315 tests), tests per file and per area, the test environment, and what is not covered |
+| [Presentation outline](docs/PRESENTATION.md) | 10-minute presentation: timings, requirement mapping, three engineering decisions, demo script and honest limits |
+| [Reflection](docs/REFLECTION.md) | Individual reflection: what I built, challenges, decisions, mistakes, learning, limits and next steps |
 
 ## Tech Stack
 
@@ -115,7 +117,9 @@ fs-01-shopsphere/
 ├── docs/                   # project documentation
 │   ├── architecture.md     # Mermaid architecture diagrams and design decisions
 │   ├── API.md              # API reference
-│   └── TEST_RESULTS.md     # result of the full test run
+│   ├── TEST_RESULTS.md     # result of the full test run
+│   ├── PRESENTATION.md     # 10-minute presentation outline
+│   └── REFLECTION.md       # individual reflection
 ├── client/                 # React app (Vite)
 │   ├── vercel.json         # rewrites every path to index.html (React Router refresh on Vercel)
 │   └── src/
@@ -547,3 +551,4 @@ This project follows Conventional Commits: `feat`, `fix`, `chore`, `docs`, `styl
 - [x] Step 11: Image storage adapters (local, Cloudinary, AWS S3) with a driver selector
 - [x] Step 12: Deployment (Vercel, Render, MongoDB Atlas, Elastic Cloud, Cloudinary), production settings
 - [x] Step 13: Documentation (architecture diagrams, API reference, test results)
+- [x] Step 14: Presentation outline and individual reflection
