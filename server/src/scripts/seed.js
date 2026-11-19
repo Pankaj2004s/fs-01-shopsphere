@@ -14,13 +14,21 @@ const vendorsData = [
 const categoryNames = ["Books", "Electronics", "Fashion"];
 
 const productsData = [
-  { name: "Clean Code", price: 499, stock: 25, category: "Books", vendor: 0 },
+  {
+    name: "Clean Code",
+    price: 499,
+    stock: 25,
+    category: "Books",
+    vendor: 0,
+    image: "clean-code",
+  },
   {
     name: "The Pragmatic Programmer",
     price: 599,
     stock: 18,
     category: "Books",
     vendor: 0,
+    image: "pragmatic-programmer",
   },
   {
     name: "Atomic Habits",
@@ -28,6 +36,7 @@ const productsData = [
     stock: 40,
     category: "Books",
     vendor: 1,
+    image: "atomic-habits",
   },
   {
     name: "Wireless Mouse",
@@ -35,6 +44,7 @@ const productsData = [
     stock: 60,
     category: "Electronics",
     vendor: 1,
+    image: "wireless-mouse",
   },
   {
     name: "Mechanical Keyboard",
@@ -42,6 +52,7 @@ const productsData = [
     stock: 15,
     category: "Electronics",
     vendor: 0,
+    image: "mechanical-keyboard",
   },
   {
     name: "USB-C Charger 65W",
@@ -49,6 +60,7 @@ const productsData = [
     stock: 32,
     category: "Electronics",
     vendor: 1,
+    image: "usb-c-charger",
   },
   {
     name: "Cotton T-Shirt",
@@ -56,6 +68,7 @@ const productsData = [
     stock: 100,
     category: "Fashion",
     vendor: 0,
+    image: "cotton-tshirt",
   },
   {
     name: "Denim Jeans",
@@ -63,6 +76,7 @@ const productsData = [
     stock: 45,
     category: "Fashion",
     vendor: 1,
+    image: "denim-jeans",
   },
   {
     name: "Running Shoes",
@@ -70,11 +84,14 @@ const productsData = [
     stock: 22,
     category: "Fashion",
     vendor: 0,
+    image: "running-shoes",
   },
 ];
 
-const placeholderImage = (name) =>
-  `https://placehold.co/800x600/EEF2FF/4338CA/png?text=${encodeURIComponent(name).replaceAll("%20", "+")}`;
+// The images are SVG files in client/public/products, served by the client.
+// CLIENT_URL decides the host: localhost for development, the Vercel URL for live.
+const imageBase = `${process.env.CLIENT_URL ?? "http://localhost:5173"}/products`;
+const productImage = (file) => `${imageBase}/${file}.svg`;
 
 const seed = async () => {
   await mongoose.connect(env.mongoUri);
@@ -103,10 +120,10 @@ const seed = async () => {
 
   await Product.deleteMany({ vendor: { $in: vendors.map((v) => v._id) } });
 
-  const docs = productsData.map(({ category, vendor, ...rest }) => ({
+  const docs = productsData.map(({ category, vendor, image, ...rest }) => ({
     ...rest,
     description: `${rest.name} - sample product for ShopSphere`,
-    images: [placeholderImage(rest.name)],
+    images: [productImage(image)],
     category: categories[category]._id,
     vendor: vendors[vendor]._id,
   }));
