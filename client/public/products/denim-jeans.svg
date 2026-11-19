@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" width="800" height="600" role="img">
+<defs>
+<linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF4EA"/><stop offset="1" stop-color="#FFD7B5"/></linearGradient>
+</defs>
+<rect width="800" height="600" fill="url(#bg)"/>
+<circle cx="640" cy="130" r="150" fill="#FB923C" opacity="0.18"/>
+<circle cx="130" cy="520" r="120" fill="#FB923C" opacity="0.14"/>
+
+<ellipse cx="400" cy="528" rx="190" ry="16" fill="#000" opacity="0.12"/>
+<polygon points="285,95 515,95 545,515 430,515 400,262 370,515 255,515" fill="#3F63A3"/>
+<polygon points="400,150 400,262 370,515 255,515 285,95 330,95" fill="#335291" opacity="0.5"/>
+<rect x="285" y="95" width="230" height="40" fill="#2B4682"/>
+<g fill="#223A6E"><rect x="305" y="88" width="12" height="52" rx="3"/><rect x="394" y="88" width="12" height="52" rx="3"/><rect x="483" y="88" width="12" height="52" rx="3"/></g>
+<circle cx="400" cy="156" r="9" fill="#F4C95D"/>
+<path d="M400 168 V262" stroke="#F4C95D" stroke-width="3" stroke-dasharray="8 6"/>
+<path d="M305 150 Q330 215 392 205" stroke="#F4C95D" stroke-width="3" fill="none" stroke-dasharray="8 6"/>
+<path d="M495 150 Q470 215 408 205" stroke="#F4C95D" stroke-width="3" fill="none" stroke-dasharray="8 6"/>
+<path d="M262 490 H368 M432 490 H538" stroke="#F4C95D" stroke-width="3" stroke-dasharray="8 6"/>
+
+</svg>
