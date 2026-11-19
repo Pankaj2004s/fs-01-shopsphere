@@ -2,7 +2,7 @@
 
 A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, Node.js), with Redis for caching and rate limiting, Elasticsearch for product search, Razorpay (test mode) for payments and a pluggable image storage (local disk, Cloudinary or AWS S3). The app is deployed on Vercel and Render.
 
-> Status: deployed, documented and ready to present. Steps 1 to 14 are complete: setup, authentication and roles, products and categories, cart and orders, automated tests, React client, Tailwind styling, vendor features with image upload, Redis plus Elasticsearch, Razorpay payments with a webhook, image storage adapters, deployment (Vercel, Render, MongoDB Atlas, Elastic Cloud, Cloudinary), documentation (architecture diagrams, API reference, test results), and the presentation outline and individual reflection.
+> Status: deployed, documented and ready to present. Steps 1 to 15 are complete: setup, authentication and roles, products and categories, cart and orders, automated tests, React client, Tailwind styling, vendor features with image upload, Redis plus Elasticsearch, Razorpay payments with a webhook, image storage adapters, deployment (Vercel, Render, MongoDB Atlas, Elastic Cloud, Cloudinary), documentation (architecture diagrams, API reference, test results), the presentation outline and individual reflection, and a final polish (illustrated product images, screenshots, performance numbers and a browser check).
 
 ## Documentation
 
@@ -10,9 +10,37 @@ A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, N
 | -------- | ----------- |
 | [Architecture](docs/architecture.md) | Mermaid diagrams: system overview, request pipeline inside the API, order and payment sequence, search and image upload, and the design decisions |
 | [API reference](docs/API.md) | Every endpoint with access rules, request, response, errors and rate limits, plus the error format and the order status rules |
-| [Test results](docs/TEST_RESULTS.md) | Result of the full test run (25 files, 315 tests), tests per file and per area, the test environment, and what is not covered |
+| [Test results](docs/TEST_RESULTS.md) | Result of the full test run (25 files, 315 tests), tests per file and per area, local performance numbers, a manual browser check, the test environment, and what is not covered |
 | [Presentation outline](docs/PRESENTATION.md) | 10-minute presentation: timings, requirement mapping, three engineering decisions, demo script and honest limits |
-| [Reflection](docs/REFLECTION.md) | Individual reflection: what I built, challenges, decisions, mistakes, learning, limits and next steps |
+| [Reflection](docs/REFLECTION.md) | Individual reflection: what I built, challenges, decisions, learning, limits and next steps |
+
+## Screenshots
+
+Taken on a local run with Razorpay in test mode. The product images are SVG illustrations that live in `client/public/products`.
+
+**Home page**
+
+![Home page](docs/screenshots/home.png)
+
+**Product list**
+
+![Product list](docs/screenshots/products.png)
+
+**Product detail**
+
+![Product detail](docs/screenshots/product-detail.png)
+
+**Cart**
+
+![Cart](docs/screenshots/cart.png)
+
+**Razorpay Checkout in test mode**
+
+![Razorpay Checkout in test mode](docs/screenshots/razorpay-test-mode.png)
+
+**Orders after a successful payment**
+
+![Orders page with a paid order](docs/screenshots/orders-paid.png)
 
 ## Tech Stack
 
@@ -45,7 +73,7 @@ A multi-vendor marketplace built with the MERN stack (MongoDB, Express, React, N
 - Stock safety: stock is reserved with an atomic conditional update (no overselling when two customers buy the last item) and is rolled back if any item fails
 - Order history for customers with pagination and a status filter
 - Order status flow with allowed transitions; cancelling an order puts the items back in stock exactly once
-- Seed script for sample categories, vendors and products (idempotent)
+- Seed script for sample categories, vendors and products with illustrated images (idempotent)
 - Centralized error handling with a custom `ApiError` class, Mongo duplicate, validation, cast and upload errors mapped to 409, 400 or 413, and safe messages in production
 
 ### Vendor features
@@ -117,11 +145,13 @@ fs-01-shopsphere/
 ├── docs/                   # project documentation
 │   ├── architecture.md     # Mermaid architecture diagrams and design decisions
 │   ├── API.md              # API reference
-│   ├── TEST_RESULTS.md     # result of the full test run
+│   ├── TEST_RESULTS.md     # test run, performance numbers and browser check
 │   ├── PRESENTATION.md     # 10-minute presentation outline
-│   └── REFLECTION.md       # individual reflection
+│   ├── REFLECTION.md       # individual reflection
+│   └── screenshots/        # screenshots of the running app
 ├── client/                 # React app (Vite)
 │   ├── vercel.json         # rewrites every path to index.html (React Router refresh on Vercel)
+│   ├── public/products/    # illustrated product images (SVG) used by the seed script
 │   └── src/
 │       ├── api/            # fetch wrapper and API functions (auth, products, cart, orders, payments, users, uploads, categories)
 │       ├── components/     # Layout, ProtectedRoute, VendorRoute, ProductCard, ProductFilters, Pagination
@@ -196,6 +226,8 @@ cd server && npm run seed
 npm run reindex
 ```
 
+The seed script links every product to an SVG illustration in `client/public/products`. The links start with `CLIENT_URL` (default `http://localhost:5173`), so the images show when the client runs on that address.
+
 5. Run the backend and the frontend in two terminals:
 
 ```bash
@@ -232,6 +264,7 @@ Deployment notes:
 - All secrets are set only in the Render dashboard, never committed. `.env.example` lists every variable.
 - `NODE_ENV=production` turns on `trust proxy` (one proxy hop), so the rate limiter sees the real client IP behind Render, and makes `CLIENT_URL` a required variable.
 - `CLIENT_URL` must be the exact origin of the client without a trailing slash, because CORS compares the origin as a string.
+- The sample product images are SVG files in `client/public/products`, so Vercel serves them. In Atlas every sample product stores the full link, for example `https://fs-01-shopsphere.vercel.app/products/running-shoes.svg`.
 - Load the products into the hosted search index once, with the production values set for that one command only (the `.env` file is not changed):
 
 ```bash
@@ -283,7 +316,7 @@ What is covered:
 - Webhook: missing, wrong and valid signatures, invalid JSON, `payment.captured` and `payment.failed`, the same event twice, a paid order never becoming failed, failed then captured, unknown order and unknown event answered with 200
 - Storage: Cloudinary signed form (signature recomputed in the test), the API secret never in the request, 502 when rejected or unreachable, 503 when not configured, 400 for a wrong file type; S3 bucket, key format, content type and body, public URL, 502, 503 and 400; the selector picks the adapter from `STORAGE_DRIVER` and answers 500 for an unknown driver
 
-Latest result: 25 test files, 315 tests, all passing (215.97 s on 16 November 2026). Details, tests per file and what is not covered: [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md).
+Latest result: 25 test files, 315 tests, all passing (215.97 s on 16 November 2026). Details, tests per file, local performance numbers (cached list and search answer in about 9 ms), a manual browser check of the customer flow and what is not covered: [docs/TEST_RESULTS.md](docs/TEST_RESULTS.md).
 
 The coverage table below was measured after Step 5 (206 tests) and has not been measured again.
 
@@ -304,7 +337,7 @@ The coverage table below was measured after Step 5 (206 tests) and has not been 
 | ------------------------- | ------------------------------------------------------------------------- |
 | `PORT`                    | Server port (default 5000)                                                |
 | `MONGO_URI`               | MongoDB connection string (required)                                      |
-| `CLIENT_URL`              | Allowed frontend origin for CORS, without a trailing slash (required when `NODE_ENV=production`) |
+| `CLIENT_URL`              | Allowed frontend origin for CORS, without a trailing slash (required when `NODE_ENV=production`). `npm run seed` also uses it as the host of the product image links (default `http://localhost:5173`) |
 | `NODE_ENV`                | `development` or `production`                                             |
 | `JWT_SECRET`              | Secret used to sign tokens (required)                                     |
 | `JWT_EXPIRES_IN`          | Token lifetime, for example `7d` (default 7d)                             |
@@ -514,19 +547,20 @@ The architecture diagrams and the reasons behind the main design choices are in 
 - Two order requests from the same cart at the exact same time could create two orders. An idempotency key would prevent this. The client only disables the button while the request runs.
 - Products are hard deleted. Orders keep a snapshot of name and price, so order history stays correct.
 - Elasticsearch is updated after MongoDB in a separate step, so the two can differ for a short time, or longer if the server crashes in between. `npm run reindex` repairs the index. If the index was missing when the first product was written, Elasticsearch creates one with a guessed mapping, and `npm run reindex` replaces it with the correct one.
-- A cached product list can be up to 60 seconds old if Redis was down when a product changed.
+- A cached product list can be up to 60 seconds old if Redis was down when a product changed, and also after products are changed directly in the database.
 - Search results are ordered by the chosen sort, not by relevance.
 - When Elasticsearch fails, the MongoDB fallback does not accept typos, so its results can differ.
 - The hosted Elasticsearch is a 14-day Elastic Cloud trial. When it ends, search uses the MongoDB fallback.
 - Uploaded images go to the adapter chosen by `STORAGE_DRIVER`. The local disk is temporary on hosts such as Render, so a deployed server must use Cloudinary or S3. Files are not deleted when an image is removed from a product or the product is deleted, and the file type is taken from the request header (a production system should check the file contents). The 5 MB limit is written in two places.
+- The sample products use SVG illustrations from `client/public/products`, not photos. The product links store the full URL of the client, so they must be updated if the client URL changes.
 - The Cloudinary adapter is tested with a stubbed `fetch` and it was also run once against a live Cloudinary account from the deployed server. The S3 adapter is tested with a mocked AWS SDK only. It has not been run against a live AWS account, because no AWS account was available.
 - Becoming a vendor is instant, there is no approval step. An admin who opens a vendor page is sent to the become-seller page.
 - In production the server sets `trust proxy` to 1, which fits one proxy such as Render. A different hosting setup with more proxies needs another value, otherwise all users share one rate limit counter.
 - On startup the rate limit library logs a store initialization error when Redis is not connected yet. The rate limit headers are present on the deployed server, so the limiter works.
 - `npm audit` reports a moderate issue in `minimatch` through `nodemon`, which is a development tool only.
-- Tests need local MongoDB, Redis and Elasticsearch and take about 4 to 5 minutes. There are no frontend tests, so the search and filter page and the Pay now flow were checked only with lint and build, not in a browser.
+- Tests need local MongoDB, Redis and Elasticsearch and take about 4 to 5 minutes. There are no frontend tests. The customer flow (search, cart, order and Razorpay Checkout in test mode) was checked by hand in a browser on a local run. The vendor pages and the deployed site were not checked in a browser.
 - The client keeps the JWT in `localStorage`, which JavaScript can read, so an XSS bug could steal it. An `httpOnly` cookie would be safer in production.
-- Payments run in Razorpay test mode only. Creating a real Razorpay order was checked once against the test API with a script. The webhook is registered in the Razorpay dashboard and a signed test event was accepted by the deployed server, but the Razorpay popup and a real webhook call from Razorpay after a payment have not been run end to end.
+- Payments run in Razorpay test mode only. The Razorpay popup and the payment confirmation were run by hand in a browser on a local run (test mode). A real webhook call from Razorpay after a payment was not run, because Razorpay cannot reach a local server. The webhook is registered in the Razorpay dashboard and a signed test event was accepted by the deployed server.
 - There is no vendor payout or split: the money would go to one Razorpay account. Razorpay Route or Stripe Connect need business verification. Every order item stores its vendor and price, so a split could be calculated later.
 - A paid order that is cancelled afterwards is not refunded by the code. A refund has to be made in the Razorpay dashboard.
 - A payment that arrives for an order cancelled in the meantime is still recorded as paid, with no automatic refund.
@@ -552,3 +586,4 @@ This project follows Conventional Commits: `feat`, `fix`, `chore`, `docs`, `styl
 - [x] Step 12: Deployment (Vercel, Render, MongoDB Atlas, Elastic Cloud, Cloudinary), production settings
 - [x] Step 13: Documentation (architecture diagrams, API reference, test results)
 - [x] Step 14: Presentation outline and individual reflection
+- [x] Step 15: Final polish (illustrated product images, screenshots, performance numbers, browser check)
