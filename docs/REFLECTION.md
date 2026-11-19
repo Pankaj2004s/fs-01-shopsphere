@@ -8,7 +8,7 @@ Repository: https://github.com/Pankaj2004s/fs-01-shopsphere
 
 ShopSphere is a multi-vendor marketplace. Vendors list products with images, and customers search, order and pay (Razorpay test mode). I built it as a MERN project with Elasticsearch, Redis, a storage adapter layer and a feature-based monolith on the server.
 
-I wrote every file myself by typing it, not by copy-pasting, with an AI assistant explaining each file and each line. I used AI for explanations, for planning the steps and for finding mistakes. I want to say this openly. I also used official documentation. I worked in 14 steps, from setup to documentation, in over 330 small Conventional commits, and I ran tests at the end of each big step.
+I wrote every file myself by typing it, not by copy-pasting, with an AI assistant explaining each file and each line. I used AI for explanations, for planning the steps and for finding mistakes. I want to say this openly. I also used official documentation. I worked in 15 steps, from setup to final polish and documentation, in over 340 small Conventional commits, and I ran tests at the end of each big step.
 
 ## 2. Technical challenges and how I solved them
 
@@ -37,7 +37,7 @@ Still weak: writing frontend tests, and writing backend code completely from scr
 - Payments are Razorpay test mode. There is no real vendor payout or split.
 - The S3 adapter is tested with a mock, not on live AWS.
 - Hosted Elasticsearch is a 14-day trial. After it ends, search falls back to MongoDB (no typo tolerance).
-- The React client has no automated tests. I checked the customer flow (search, register, cart, order, Razorpay Checkout and payment confirmation) in a browser in test mode on a local run, but I did not check the vendor pages in a browser.
+- The React client has no automated tests. I checked the customer flow (search, register, cart, order, Razorpay Checkout and payment confirmation) by hand in a browser in test mode on a local run, and the vendor pages (dashboard, my products, vendor orders and adding a product) on the deployed site. I did not check the admin role or the mobile layout.
 - A real Razorpay webhook call after a payment was not verified. Only a signed test event was sent to the deployed server with curl.
 
 I say this openly because a project should be judged on what it really does. Claiming more than I verified would be dishonest and would fall apart in the first question.
@@ -46,4 +46,4 @@ I say this openly because a project should be judged on what it really does. Cla
 
 1. Refunds, because a payment system without refunds is incomplete.
 2. An idempotency key for placing orders, so a double click cannot create two orders.
-3. Frontend tests and a full browser check, because the client is my biggest unverified area.
+3. Frontend tests and a browser check of the admin role and the mobile layout, because the client has no automated tests.
