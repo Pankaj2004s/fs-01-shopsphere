@@ -1,6 +1,6 @@
 # ShopSphere Test Results
 
-Result of the full server test suite, run on 16 November 2026.
+Result of the full server test suite, run on 16 November 2026. Since that run, only documentation, the seed script and static product images have changed. No API or server logic code has changed.
 
 ## Summary
 
@@ -73,11 +73,55 @@ npx vitest run --reporter=verbose
 | Cache, rate limit, error handler, health, helpers, extra cases | cache, rateLimit, errorHandler, health, helpers, gaps | 43 |
 | **Total** | **25 files** | **315** |
 
+## Performance (local measurements)
+
+Measured on 18 November 2026 on the development machine (Windows, local MongoDB, Redis and Elasticsearch in Docker). This is a simple latency check, not a load test: one client sent 10 requests one after another to each endpoint with curl, and the total time of every request was recorded.
+
+| Endpoint | First request | Next 9 requests (average) | Min | Max |
+| --- | --- | --- | --- | --- |
+| `/api/health` | 4.6 ms | 3.6 ms | 2.6 ms | 5.0 ms |
+| `/api/categories` | 33.4 ms | 8.4 ms | 8.0 ms | 9.4 ms |
+| `/api/products?limit=10` | 32.5 ms | 9.3 ms | 8.5 ms | 11.0 ms |
+| `/api/products?search=runing` | 249.5 ms | 9.0 ms | 7.7 ms | 11.7 ms |
+
+How to read it:
+
+- The first request is a cache miss. It reads from MongoDB, and for search also from Elasticsearch. The first search request may also include one-time warm-up work.
+- The next requests are answered from the Redis cache (cache-aside, 60 seconds for products and 5 minutes for categories).
+- `/api/health` touches no database or cache, so it shows the base cost of the server and of curl itself.
+
+Not measured: concurrent load, and the latency of the deployed server. The free Render plan sleeps when idle, and the first request after a sleep can take about a minute.
+
+Command used (from the `server` folder, with the server running):
+
+```bash
+for url in "api/health" "api/categories" "api/products?limit=10" "api/products?search=runing"; do
+  echo "== $url"
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    curl -s -o /dev/null -w "%{time_total}\n" "http://localhost:5000/$url"
+  done
+done
+```
+
+## Manual browser check
+
+Done by hand on 18 November 2026, on a local run (client on port 5173, server on port 5000), with Razorpay in test mode:
+
+- Home page and product list, with the product images
+- Search for `runing`, which finds Running Shoes
+- Register, and the logged-in navbar
+- Product detail, add to cart, cart page and placing an order
+- Orders page with the Pay now button, which opens Razorpay Checkout in test mode
+- A payment with an international test card was rejected by Razorpay. The app showed Razorpay's message and the order stayed unpaid
+- A payment with a domestic test card succeeded, and the order then showed the Paid badge (payment signature verified by the server)
+
+Not checked in a browser: the vendor pages (dashboard, product form, vendor orders), the admin flow, the mobile layout, and the deployed site (it was checked with curl only).
+
 ## Not covered
 
 - Test coverage percentage was not measured.
-- The React client has no automated tests. It is checked with `npm run lint` and `npm run build` only.
-- The Razorpay Checkout popup and a real webhook call from Razorpay were not tested end to end. Payment confirm and webhook logic is tested with generated signatures.
+- The React client has no automated tests. It is checked with `npm run lint`, `npm run build` and the manual browser check above.
+- A real webhook call from Razorpay after a payment was not tested, because Razorpay cannot reach a local server. The webhook logic is tested with generated signatures, and a signed test event was sent to the deployed server with curl.
 - The S3 adapter was not run on live AWS (no AWS account). The Cloudinary adapter was checked live once with curl on the deployed API.
 
 ## Live checks on the deployed system
